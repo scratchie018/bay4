@@ -130,6 +130,20 @@ kbd{font:600 11px var(--body);color:var(--bone);background:#2a2e33;border:1px so
 .ghost:hover{border-color:var(--steel)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .online{border-top:1px solid var(--edge);padding-top:14px}
+.cheats{border-top:1px solid var(--edge);padding-top:14px;display:grid;gap:10px}
+.cheathead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
+.cheatnote{font-size:12px;color:var(--steel)}
+.cheatnote.off{color:var(--blood)}
+.cheatgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ch{appearance:none;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;background:#121417;border:1px solid var(--edge);color:var(--bone);font:600 13px var(--body);padding:7px 9px;cursor:pointer}
+.ch small{display:block;font-weight:400;font-size:11px;color:var(--steel)}
+.ch i{flex:none;width:26px;height:14px;border:1px solid var(--edge);background:#0b0c0e;position:relative}
+.ch i::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;background:var(--steel);transition:left .12s}
+.ch[aria-pressed="true"]{border-color:var(--sodium);background:#26221c}
+.ch[aria-pressed="true"] i{border-color:var(--sodium)}
+.ch[aria-pressed="true"] i::after{left:14px;background:var(--sodium)}
+.ch:disabled,.cheats .ghost:disabled{opacity:.4;cursor:default}
+#cheatTag{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--sodium);pointer-events:none}
 .netrow{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .fld{display:grid;gap:4px}
 .fld input{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 15px var(--body);padding:9px 10px;width:150px}
@@ -202,6 +216,7 @@ tr.me td{color:var(--sodium);font-weight:700}
   <div class="hud" id="feed"></div>
   <div class="hud" id="callout"></div>
   <div class="hud" id="death" hidden><div class="k" id="deathMsg">Killed by Vex</div><div class="t" id="respT">2.4</div></div>
+  <div class="hud" id="cheatTag" hidden>CHEATS ON</div>
   <div class="hud" id="lockHint" hidden>Mouse lock is blocked here. Move the mouse inside the window to look.</div>
 
   <div id="touch" hidden>
@@ -274,6 +289,17 @@ tr.me td{color:var(--sodium);font-weight:700}
       <h2>Paused</h2>
       <div class="row"><button class="go-btn" id="resume" type="button">Resume</button><button class="ghost" id="quit" type="button">Quit to menu</button></div>
       <p class="rule">Press <kbd>M</kbd> to mute or unmute sound.</p>
+      <section class="cheats" aria-labelledby="cheatTitle">
+        <div class="cheathead"><span class="lbl" id="cheatTitle">CHEATS</span><span class="cheatnote" id="cheatNote">Bot matches only. Open this panel any time with <kbd>`</kbd></span></div>
+        <div class="cheatgrid" id="cheatGrid"></div>
+        <div class="row" id="cheatActions">
+          <button class="ghost" id="ch-killall" type="button">Kill every bot</button>
+          <button class="ghost" id="ch-addbot" type="button">Add a bot</button>
+          <button class="ghost" id="ch-kills" type="button">Give me 5 kills</button>
+          <button class="ghost" id="ch-heal" type="button">Full health</button>
+          <button class="ghost" id="ch-off" type="button">Turn all off</button>
+        </div>
+      </section>
     </div></div>
   </div>
 
@@ -593,13 +619,14 @@ function attack(e, type) {
   if (!e.alive || e.swing || e.cd > 0 || e.weapon !== 'knife' || e.drawT > 0) return;
   e.inspect = 0; e.side = -e.side;
   e.swing = { type, t:0, hit:new Set(), side:e.side };
-  e.cd = SPEC[type].cd;
+  e.cd = SPEC[type].cd*(e.isPlayer && cheat('rapid') ? .4 : 1);
+  if (!e.isPlayer && cheat('passive')) { e.swing = null; return; }
   if (e.isPlayer) sfx(type);
 }
 function dash(e, dx, dy) {
   if (!e.alive || e.dashCd > 0 || e.weapon !== 'knife') return;
   const m = Math.hypot(dx, dy) || 1;
-  e.dashT = .15; e.dashCd = 1.3; e.dashX = dx/m; e.dashY = dy/m;
+  e.dashT = .15; e.dashCd = e.isPlayer && cheat('dash') ? .05 : 1.3; e.dashX = dx/m; e.dashY = dy/m;
   if (e.isPlayer) sfx('dash');
 }
 function updSwing(e, dt) {
@@ -624,6 +651,8 @@ function updSwing(e, dt) {
 }
 function damage(a, o, dmg, how) {
   if (o.prot > 0 || !o.alive) return false;
+  if (o.isPlayer && cheat('god')) return false;
+  if (a.isPlayer && cheat('onehit')) dmg = 999;
   o.hp -= dmg; o.sinceHit = 0; o.flash = .14;
   if (how.weapon === 'knife') { const k = how.behind ? 80 : 110; o.vx += Math.cos(a.ang)*k; o.vy += Math.sin(a.ang)*k; }
   bleed(o.x, o.y, Math.atan2(o.y-a.y, o.x-a.x), how.hs ? 1.65 : 1.1, how.behind || how.weapon === 'awp' ? 24 : 12);
@@ -634,7 +663,7 @@ function damage(a, o, dmg, how) {
   return true;
 }
 function kill(a, o, how) {
-  o.alive = false; o.hp = 0; o.respawn = 2.6; o.deaths++; o.streak = 0; o.swing = null; o.deadT = 0; o.zoom = 0;
+  o.alive = false; o.hp = 0; o.respawn = o.isPlayer && cheat('respawn') ? .3 : 2.6; o.deaths++; o.streak = 0; o.swing = null; o.deadT = 0; o.zoom = 0;
   a.kills++; a.streak++; a.best = Math.max(a.best, a.streak);
   for (let i = 0; i < 6; i++) stamp(o.x+rand(-14,14), o.y+rand(-14,14), rand(8,18), .5);
   feedPush(a, o, how);
@@ -677,10 +706,10 @@ function playerFire() {
   const p = player;
   if (p.weapon !== 'awp' || p.cd > 0 || p.reloadT > 0 || p.drawT > 0 || !p.alive) return;
   if (p.ammo <= 0) { startReload(); return; }
-  p.ammo--; p.cd = AWP.bolt;
+  if (!cheat('ammo')) p.ammo--; p.cd = cheat('rapid') ? .3 : AWP.bolt;
   const scoped = p.zoom > 0, speed = Math.hypot(p.vx, p.vy);
-  let spread = scoped ? .0015 + clamp((speed-40)/200, 0, 1)*.05 : .07 + clamp(speed/235, 0, 1)*.05;
-  if (p.jumpY > .05) spread += .12;
+  let spread = cheat('spread') ? 0 : scoped ? .0015 + clamp((speed-40)/200, 0, 1)*.05 : .07 + clamp(speed/235, 0, 1)*.05;
+  if (p.jumpY > .05 && !cheat('spread')) spread += .12;
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize(), up = new THREE.Vector3().crossVectors(right, dir).normalize();
   const a = rand(0, Math.PI*2), r = Math.sqrt(Math.random())*spread;
@@ -707,6 +736,7 @@ function startReload() {
   p.reloadT = AWP.reload; p.zoom = 0; p.rezoom = 0; sfx('bolt', .5);
 }
 function botFire(e, T) {
+  if (cheat('passive')) { e.ai.aim = 0; return; }
   const D = DIFF[diff];
   e.cd = AWP.bolt; e.ai.aim = 0; e.revealT = 1.4;
   const sp = Math.hypot(T.vx, T.vy), dist = Math.hypot(T.x-e.x, T.y-e.y);
@@ -866,17 +896,18 @@ function altFire() {
 function jumpOrDash() {
   const p = player; if (!p.alive) return;
   if (p.weapon === 'knife' && touchMode) { const [mx, my] = moveDir(); if (mx || my) dash(p, mx, my); else dash(p, Math.cos(p.ang), Math.sin(p.ang)); }
-  else if (p.jumpY <= 0) p.jumpV = 5.2;
+  else if (p.jumpY <= 0) p.jumpV = cheat('jump') ? 9 : 5.2;
 }
 addEventListener('keydown', e => {
   if (e.code === 'Tab') { e.preventDefault(); if (state === 'play') { $('board').hidden = false; renderBoard($('boardT')); } return; }
   if (e.code === 'Escape') { if (state === 'pause') resume(); else if (state === 'play' && !document.pointerLockElement) pause(); return; }
   if (e.code === 'KeyM') { muted = !muted; return; }
+  if (e.code === 'Backquote') { if (state === 'play') { pause(); $('cheatGrid').scrollIntoView({ block:'nearest' }); } else if (state === 'pause') resume(); return; }
   if (state !== 'play') return;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   keys.add(e.code);
-  if (e.code === 'Space' && player.alive && player.jumpY <= 0) player.jumpV = 5.2;
+  if (e.code === 'Space' && player.alive && player.jumpY <= 0) player.jumpV = cheat('jump') ? 9 : 5.2;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { const [mx, my] = moveDir(); if (mx || my) dash(player, mx, my); else dash(player, Math.cos(player.ang), Math.sin(player.ang)); }
   if (e.code === 'KeyF' && player.alive && player.weapon === 'knife' && !player.swing && player.inspect <= 0) player.inspect = 1.6;
   if (e.code === 'Digit1') swapTo('awp');
@@ -1030,7 +1061,7 @@ function drawRadar() {
   c.strokeStyle = '#f0a23b'; c.lineWidth = 14; c.strokeRect(0, 0, W, H);
   for (const e of ents) {
     if (e === player || !e.alive) continue;
-    if (!(los(player, e) && Math.hypot(e.x-player.x, e.y-player.y) < 1400) && e.revealT <= 0) continue;
+    if (!cheat('radar') && !(los(player, e) && Math.hypot(e.x-player.x, e.y-player.y) < 1400) && e.revealT <= 0) continue;
     c.fillStyle = e.color; c.beginPath(); c.arc(e.x, e.y, 34, 0, Math.PI*2); c.fill();
     c.strokeStyle = '#000'; c.lineWidth = 6; c.stroke();
   }
@@ -1183,6 +1214,7 @@ function startMatch() {
   state = 'play'; $('game').classList.add('playing');
   $('lockHint').hidden = lockOK || touchMode;
   requestLock();
+  applyCheatVisuals();
 }
 function updTouchLabels() {
   if (!touchMode || !player) return;
@@ -1191,11 +1223,13 @@ function updTouchLabels() {
 }
 function pause() {
   if (state !== 'play') return;
+  renderCheats();
   state = 'pause'; $('pause').hidden = false; $('game').classList.remove('playing'); mouse.L = mouse.R = false; keys.clear();
   if (document.pointerLockElement) document.exitPointerLock();
 }
-function resume() { state = 'play'; $('pause').hidden = true; $('game').classList.add('playing'); last = performance.now(); requestLock(); }
+function resume() { $('cheatTag').hidden = !anyCheat(); state = 'play'; $('pause').hidden = true; $('game').classList.add('playing'); last = performance.now(); requestLock(); }
 function toMenu() {
+  $('cheatTag').hidden = true;
   if (NET.on) leaveOnline();
   state = 'menu'; for (const id of ['end','pause','board','hud','touch','death','lockHint','scope']) $(id).hidden = true;
   $('menu').hidden = false; $('game').classList.remove('playing');
@@ -1203,6 +1237,7 @@ function toMenu() {
 }
 function endMatch(why) {
   if (state !== 'play') return;
+  $('cheatTag').hidden = true;
   state = 'end'; $('game').classList.remove('playing');
   if (document.pointerLockElement) document.exitPointerLock();
   const s = standings(), w = s[0], rank = s.indexOf(player)+1;
@@ -1242,6 +1277,74 @@ function syncPickers() {
 }
 syncPickers();
 if (touchMode) { $('keys').hidden = true; $('touchHelp').hidden = false; }
+
+/* ---------- cheats (bot matches only; ignored online) ---------- */
+const CHEATS = [
+  ['god', 'God mode', 'Take no damage'],
+  ['onehit', 'One-hit kills', 'Every hit kills'],
+  ['ammo', 'Infinite ammo', 'No reloads'],
+  ['rapid', 'Rapid fire', 'Fast bolt and swings'],
+  ['spread', 'Perfect aim', 'AWP shots never stray'],
+  ['aim', 'Aim assist', 'Locks on to the nearest bot you can see'],
+  ['wall', 'See through walls', 'Bots show behind cover'],
+  ['radar', 'Full radar', 'Every bot on the radar'],
+  ['speed', 'Double speed', 'Run twice as fast'],
+  ['dash', 'No dash cooldown', 'Dash as often as you like'],
+  ['jump', 'Moon jump', 'Jump higher, fall slower'],
+  ['bighead', 'Big heads', 'Easier headshots'],
+  ['slowmo', 'Slow motion', 'Everything at 40% speed'],
+  ['passive', 'Peaceful bots', 'Bots never attack'],
+  ['freeze', 'Freeze bots', 'Bots stand still'],
+  ['notimer', 'No time limit', 'The clock stops'],
+  ['respawn', 'Instant respawn', 'Back in 0.3 s'],
+];
+const CHEAT = {};
+const cheat = k => !!CHEAT[k] && !NET.on;
+function anyCheat() { return !NET.on && CHEATS.some(([k]) => CHEAT[k]); }
+function renderCheats() {
+  const online = NET.on;
+  $('cheatGrid').innerHTML = CHEATS.map(([k, t, d]) => `<button class="ch" type="button" id="ch-${k}" data-k="${k}" aria-pressed="${!!CHEAT[k]}" ${online ? 'disabled' : ''}><span>${t}<small>${d}</small></span><i></i></button>`).join('');
+  for (const b of $('cheatGrid').children) b.addEventListener('click', () => { CHEAT[b.dataset.k] = !CHEAT[b.dataset.k]; applyCheatVisuals(); renderCheats(); });
+  for (const id of ['ch-killall','ch-addbot','ch-kills','ch-heal','ch-off']) $(id).disabled = online;
+  $('cheatNote').innerHTML = online ? 'Cheats are off in online matches, so nobody can use them on other players.' : 'Bot matches only. Open this panel any time with <kbd>`</kbd>';
+  $('cheatNote').classList.toggle('off', online);
+}
+function applyCheatVisuals() {
+  const wall = cheat('wall'), big = cheat('bighead');
+  for (const e of ents) {
+    if (!e.mesh || e.remote) continue;
+    e.mesh.cloth.depthTest = !wall; e.mesh.g.traverse(m => { if (m.isMesh) m.renderOrder = wall ? 5 : 0; });
+    e.mesh.head.scale.setScalar(big ? 2.2 : 1);
+  }
+  MAT.dark.depthTest = MAT.mask.depthTest = !wall;
+  for (const m of [MAT.dark, MAT.mask]) m.needsUpdate = true;
+  $('cheatTag').hidden = !anyCheat() || state !== 'play';
+}
+$('ch-killall').addEventListener('click', () => { if (NET.on) return; for (const e of ents) if (!e.isPlayer && e.alive) { e.prot = 0; damage(player, e, 999, { weapon:player.weapon }); } });
+$('ch-addbot').addEventListener('click', () => {
+  if (NET.on || !player || ents.length >= 16) return;
+  const names = ['Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'], cols = ['#b07d5a','#5a8fb0','#9fb05a','#b05a8f','#5ab0a0','#a05ab0','#b0a55a','#6a6fb0','#b06a6a'];
+  const n = ents.length - 8;
+  const e = mk(names[(n + names.length) % names.length] + (n >= names.length ? ' ' + (n + 1) : ''), cols[(n + cols.length) % cols.length], FKEYS[Math.random()*FKEYS.length|0], false);
+  ents.push(e); buildFighter(e); spawn(e); applyCheatVisuals();
+});
+$('ch-kills').addEventListener('click', () => { if (NET.on || !player) return; player.kills += 5; player.streak += 5; player.best = Math.max(player.best, player.streak); if (player.kills >= LIMIT) { resume(); endMatch(`You reached ${LIMIT} kills`); } });
+$('ch-heal').addEventListener('click', () => { if (NET.on || !player || !player.alive) return; player.hp = 100; });
+$('ch-off').addEventListener('click', () => { for (const [k] of CHEATS) CHEAT[k] = false; applyCheatVisuals(); renderCheats(); });
+// nearest bot in view, for aim assist
+function aimAssist(dt) {
+  const p = player; let best = null, bd = 1e9;
+  for (const e of ents) {
+    if (e.isPlayer || !e.alive || !los(p, e)) continue;
+    const da = Math.abs(angDiff(Math.atan2(e.y - p.y, e.x - p.x), p.ang)); if (da > .9) continue;
+    const d = Math.hypot(e.x - p.x, e.y - p.y) + da*300; if (d < bd) { bd = d; best = e; }
+  }
+  if (!best) return;
+  const want = Math.atan2(best.y - p.y, best.x - p.x), dist = Math.hypot(best.x - p.x, best.y - p.y)*S;
+  const headY = 1.62 + (cheat('bighead') ? .15 : 0), wantP = Math.atan2(headY - (EYE + p.jumpY), Math.max(.5, dist));
+  const k = Math.min(1, dt*14);
+  p.ang += angDiff(want, p.ang)*k; p.pitch += (wantP - p.pitch)*k;
+}
 
 /* ---------- online play ----------
    Uses the page's room: everyone who has this game open right now. Each player shares their OWN state
@@ -1530,31 +1633,33 @@ function netFrame() {
 
 /* ---------- update ---------- */
 function update(dt) {
-  if (!NET.on) { matchT -= dt; if (matchT <= 0) { endMatch("Time's up"); return; } }
+  if (!NET.on) { if (!cheat('notimer')) matchT -= dt; if (matchT <= 0) { endMatch("Time's up"); return; } }
   else netFrame(dt);
   const p = player;
   const [mx, my] = moveDir();
   if (p.alive) {
+    if (cheat('aim')) aimAssist(dt);
     if (p.weapon === 'knife') { if (mouse.L) attack(p, 'slash'); if (mouse.R) attack(p, 'stab'); }
     if (p.weapon === 'awp') {
       if (p.reloadT > 0) { p.reloadT -= dt; if (p.reloadT <= 0) { p.ammo = AWP.mag; sfx('click', .5); } }
       if (p.cd <= 0 && p.rezoom) { p.zoom = p.rezoom; p.rezoom = 0; }
       if (p.ammo <= 0 && p.cd <= 0 && p.reloadT <= 0) startReload();
     }
-    p.jumpV -= 16*dt; p.jumpY = Math.max(0, p.jumpY + p.jumpV*dt); if (p.jumpY <= 0) p.jumpV = 0;
+    p.jumpV -= (cheat('jump') ? 7 : 16)*dt; p.jumpY = Math.max(0, p.jumpY + p.jumpV*dt); if (p.jumpY <= 0) p.jumpV = 0;
   }
   p.ai.mx = mx; p.ai.my = my;
   updTouchLabels();
   for (const e of ents) {
     if (e.remote) { remoteStep(e, dt); continue; }
     if (!e.alive) { e.deadT += dt; e.respawn -= dt; if (e.respawn <= 0) spawn(e); continue; }
-    if (!e.isPlayer) (mode === 'awp' ? aiAwp : aiKnife)(e, dt);
+    if (!e.isPlayer) { if (cheat('freeze')) { e.ai.mx = e.ai.my = 0; e.vx = e.vy = 0; e.swing = null; } else (mode === 'awp' ? aiAwp : aiKnife)(e, dt); }
     e.cd -= dt; e.drawT -= dt; e.dashCd -= dt; e.flash -= dt; e.prot -= dt; e.inspect -= dt; e.revealT -= dt;
     e.sinceHit += dt; if (e.sinceHit > 4.5) e.hp = Math.min(100, e.hp + 14*dt);
     updSwing(e, dt);
     let sp = e.weapon === 'awp' ? (e.isPlayer && e.zoom > 0 ? 95 : 195) : 235;
     if (e.swing && e.swing.type === 'stab' && e.swing.t < SPEC.stab.act) sp *= .45;
     if (e.isPlayer && keys.has('KeyC')) sp *= .5;
+    if (e.isPlayer && cheat('speed')) sp *= 2;
     if (e.dashT > 0) { e.dashT -= dt; e.vx = e.dashX*760; e.vy = e.dashY*760; }
     else { const k = Math.min(1, dt*11); e.vx += (e.ai.mx*sp - e.vx)*k; e.vy += (e.ai.my*sp - e.vy)*k; }
     e.x += e.vx*dt; e.y += e.vy*dt; collideRects(e);
@@ -1662,7 +1767,7 @@ function render(t, dt) {
 /* ---------- loop ---------- */
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min(1/30, (now - last)/1000); last = now; perfNow = now/1000;
+  const dt = Math.min(1/30, (now - last)/1000)*(cheat('slowmo') && state === 'play' ? .4 : 1); last = now; perfNow = now/1000;
   if (state === 'play') update(dt);
   render(now/1000, dt);
   requestAnimationFrame(frame);
