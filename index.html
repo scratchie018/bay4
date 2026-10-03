@@ -149,6 +149,8 @@ kbd{font:600 11px var(--body);color:var(--bone);background:#2a2e33;border:1px so
 .fld input{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 15px var(--body);padding:9px 10px;width:150px}
 .go-btn:disabled{opacity:.45;cursor:default}
 .netstatus{font-size:13px;color:var(--steel)}
+.cxbtn{padding:9px 12px}
+.cxbtn[aria-pressed="true"]{border-color:var(--sodium);color:var(--sodium);background:#26221c}
 .netstatus b{color:var(--bone)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
 #err{color:var(--blood);font-size:13px}
@@ -272,10 +274,11 @@ tr.me td{color:var(--sodium);font-weight:700}
       <div class="row"><button class="go-btn" id="start" type="button">Play vs bots</button></div>
       <div class="group online">
         <span class="lbl">PLAY ONLINE</span>
-        <p class="rule">Play against friends. Send them this page's link and a room code: everyone with the same room code and mode plays together, first to 15. The first player in a room hosts it; if they leave, someone else takes over.</p>
+        <p class="rule">Play against friends. Send them this page's link and a room code: everyone with the same room code and mode plays together, first to 15. In a cheats room everyone can use the cheat panel; cheats rooms and normal rooms never mix. The first player in a room hosts it; if they leave, someone else takes over.</p>
         <div class="netrow">
           <label class="fld" for="nick"><span class="lbl">YOUR NAME</span><input type="text" id="nick" maxlength="14" autocomplete="off"></label>
           <label class="fld" for="roomCode"><span class="lbl">ROOM CODE</span><input type="text" id="roomCode" maxlength="16" autocomplete="off"></label>
+          <button class="ghost cxbtn" id="cheatsRoom" type="button" aria-pressed="false">Cheats room: off</button>
           <button class="go-btn" id="startOnline" type="button" disabled>Play online</button>
         </div>
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
@@ -1299,20 +1302,25 @@ const CHEATS = [
   ['respawn', 'Instant respawn', 'Back in 0.3 s'],
 ];
 const CHEAT = {};
-const cheat = k => !!CHEAT[k] && !NET.on;
-function anyCheat() { return !NET.on && CHEATS.some(([k]) => CHEAT[k]); }
+// cheats that only make sense against bots or the match clock
+const BOT_ONLY = ['slowmo','passive','freeze','notimer'];
+const cheatOK = k => !NET.on || (NET.cheatsRoom && !BOT_ONLY.includes(k));
+const cheat = k => !!CHEAT[k] && cheatOK(k);
+function anyCheat() { return CHEATS.some(([k]) => cheat(k)); }
 function renderCheats() {
-  const online = NET.on;
-  $('cheatGrid').innerHTML = CHEATS.map(([k, t, d]) => `<button class="ch" type="button" id="ch-${k}" data-k="${k}" aria-pressed="${!!CHEAT[k]}" ${online ? 'disabled' : ''}><span>${t}<small>${d}</small></span><i></i></button>`).join('');
+  const online = NET.on, cx = online && NET.cheatsRoom;
+  $('cheatGrid').innerHTML = CHEATS.map(([k, t, d]) => { const ok = cheatOK(k); return `<button class="ch" type="button" id="ch-${k}" data-k="${k}" aria-pressed="${!!CHEAT[k] && ok}" ${ok ? '' : 'disabled'}><span>${t}<small>${ok || !cx ? d : 'Bot matches only'}</small></span><i></i></button>`; }).join('');
   for (const b of $('cheatGrid').children) b.addEventListener('click', () => { CHEAT[b.dataset.k] = !CHEAT[b.dataset.k]; applyCheatVisuals(); renderCheats(); });
-  for (const id of ['ch-killall','ch-addbot','ch-kills','ch-heal','ch-off']) $(id).disabled = online;
-  $('cheatNote').innerHTML = online ? 'Cheats are off in online matches, so nobody can use them on other players.' : 'Bot matches only. Open this panel any time with <kbd>`</kbd>';
-  $('cheatNote').classList.toggle('off', online);
+  for (const id of ['ch-killall','ch-addbot','ch-kills']) $(id).disabled = online;
+  $('ch-heal').disabled = online && !cx; $('ch-off').disabled = false;
+  $('cheatNote').innerHTML = cx ? 'Cheats room: everyone here can use cheats. Open this panel any time with <kbd>`</kbd>'
+    : online ? 'Cheats are off in this room. Start a cheats room from the menu to use them online.' : 'Open this panel any time with <kbd>`</kbd>. Online, cheats only work in cheats rooms.';
+  $('cheatNote').classList.toggle('off', online && !cx);
 }
 function applyCheatVisuals() {
   const wall = cheat('wall'), big = cheat('bighead');
   for (const e of ents) {
-    if (!e.mesh || e.remote) continue;
+    if (!e.mesh) continue;
     e.mesh.cloth.depthTest = !wall; e.mesh.g.traverse(m => { if (m.isMesh) m.renderOrder = wall ? 5 : 0; });
     e.mesh.head.scale.setScalar(big ? 2.2 : 1);
   }
@@ -1329,7 +1337,7 @@ $('ch-addbot').addEventListener('click', () => {
   ents.push(e); buildFighter(e); spawn(e); applyCheatVisuals();
 });
 $('ch-kills').addEventListener('click', () => { if (NET.on || !player) return; player.kills += 5; player.streak += 5; player.best = Math.max(player.best, player.streak); if (player.kills >= LIMIT) { resume(); endMatch(`You reached ${LIMIT} kills`); } });
-$('ch-heal').addEventListener('click', () => { if (NET.on || !player || !player.alive) return; player.hp = 100; });
+$('ch-heal').addEventListener('click', () => { if ((NET.on && !NET.cheatsRoom) || !player || !player.alive) return; player.hp = 100; });
 $('ch-off').addEventListener('click', () => { for (const [k] of CHEATS) CHEAT[k] = false; applyCheatVisuals(); renderCheats(); });
 // nearest bot in view, for aim assist
 function aimAssist(dt) {
@@ -1358,6 +1366,10 @@ const cleanText = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f-\u00
 const cleanCode = v => String(v || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 16) || 'bay4';
 NET.nick = cleanText(store.get('hr-nick', ''), 14) || 'Player ' + (1 + Math.floor(Math.random()*90));
 NET.code = cleanCode(store.get('hr-room', 'bay4'));
+NET.cheatsRoom = store.get('hr-cx', '0') === '1';
+function syncCxBtn() { const b = $('cheatsRoom'); b.setAttribute('aria-pressed', NET.cheatsRoom); b.textContent = `Cheats room: ${NET.cheatsRoom ? 'on' : 'off'}`; }
+syncCxBtn();
+$('cheatsRoom').addEventListener('click', () => { NET.cheatsRoom = !NET.cheatsRoom; store.set('hr-cx', NET.cheatsRoom ? '1' : '0'); syncCxBtn(); updateNetStatus(); });
 NET.color = NET_COLORS.includes(store.get('hr-color')) ? store.get('hr-color') : NET_COLORS[Math.floor(Math.random()*NET_COLORS.length)];
 store.set('hr-color', NET.color);
 $('nick').value = NET.nick; $('roomCode').value = NET.code;
@@ -1365,7 +1377,7 @@ $('nick').addEventListener('change', () => { NET.nick = cleanText($('nick').valu
 $('roomCode').addEventListener('change', () => { NET.code = cleanCode($('roomCode').value); $('roomCode').value = NET.code; store.set('hr-room', NET.code); updateNetStatus(); });
 $('startOnline').addEventListener('click', () => { $('nick').dispatchEvent(new Event('change')); $('roomCode').dispatchEvent(new Event('change')); sfx('dash'); startOnline(); });
 
-function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode; }
+function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode && (pr.cx ? 1 : 0) === (NET.cheatsRoom ? 1 : 0); }
 function updateNetStatus() {
   const el = $('netStatus'), btn = $('startOnline');
   if (!window.Peer) { el.textContent = 'Online play could not load. Check your connection and reload the page.'; btn.disabled = true; return; }
@@ -1473,7 +1485,7 @@ async function startOnline() {
   if (!window.Peer || NET.connecting) return;
   NET.connecting = true; NET.netError = ''; updateNetStatus();
   try {
-    const room = await Promise.race([makePeerRoom(`hookring-${mode}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    const room = await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
     NET.room = room;
     NET.onMigrate = id => { NET.myPeer = id; };
     room.onPeers(ch => { for (const p of ch.peers) if (p.sameTab) NET.myPeer = p.peer; if (NET.on) readPeers(ch); });
@@ -1496,7 +1508,8 @@ function beginOnlineMatch() {
   readPeers({ peers:NET.room.peers(), left:[] });
   spawn(player);
   $('feed').innerHTML = '';
-  callout(NET.room.isHost() ? 'HOSTING' : 'ONLINE', `ROOM ${NET.code.toUpperCase()} · FIRST TO ${LIMIT}`);
+  callout(NET.cheatsRoom ? 'CHEATS ROOM' : NET.room.isHost() ? 'HOSTING' : 'ONLINE', `ROOM ${NET.code.toUpperCase()} · FIRST TO ${LIMIT}`);
+  applyCheatVisuals();
 }
 function leaveOnline() {
   NET.on = false;
@@ -1524,7 +1537,7 @@ function readPeers(ch) {
       Object.assign(e, { remote:true, peer:p.peer, snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
       // ignore anything this player did before we arrived
       NET.seen.set(p.peer, { hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
-      buildFighter(e); ents.push(e);
+      buildFighter(e); ents.push(e); applyCheatVisuals();
     }
     if (p.updatedAt === e.lastUpd) continue;
     e.lastUpd = p.updatedAt;
@@ -1539,7 +1552,7 @@ function readPeers(ch) {
     e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0;
     if ((pr.r | 0) > NET.round) newRound(pr.r | 0);
     const w = pr.w === 'awp' ? 'awp' : 'knife';
-    if (w !== e.weapon) { e.weapon = w; dropRemote(e); e.gone = false; buildFighter(e); }
+    if (w !== e.weapon) { e.weapon = w; dropRemote(e); e.gone = false; buildFighter(e); applyCheatVisuals(); }
     const alive = !!pr.al;
     if (alive && !e.alive) { e.alive = true; e.deadT = 0; e.snaps = e.snaps.slice(-1); if (e.mesh) { e.mesh.g.visible = true; e.mesh.g.rotation.set(0, 0, 0); e.mesh.g.position.y = 0; } }
     if (!alive && e.alive) { e.alive = false; e.deadT = 0; }
@@ -1581,6 +1594,7 @@ function readPeers(ch) {
   for (const p of ch.left || []) { const e = remoteFor(p.peer); if (e) { dropRemote(e); ents = ents.filter(x => x !== e); } }
 }
 function netHit(a, o, dmg, how) {
+  if (a.isPlayer && cheat('onehit')) dmg = 999;
   NET.hits.push({ q:++NET.seq, t:o.peer, dm:dmg, w:how.weapon, hs:how.hs ? 1 : 0, ns:how.noscope ? 1 : 0, bk:how.behind ? 1 : 0 });
   if (NET.hits.length > 6) NET.hits.shift();
   bleed(o.x, o.y, Math.atan2(o.y-a.y, o.x-a.x), how.hs ? 1.65 : 1.1, how.behind || how.weapon === 'awp' ? 24 : 12);
@@ -1623,7 +1637,7 @@ function netFrame() {
   NET.lastSent = now;
   const r2 = v => Math.round(v*100)/100;
   NET.room.presence({
-    hr:1, rm:NET.code, md:mode, st:'play', n:NET.nick, c:NET.color, f:finish, w:p.weapon,
+    hr:1, rm:NET.code, md:mode, cx:NET.cheatsRoom ? 1 : 0, st:'play', n:NET.nick, c:NET.color, f:finish, w:p.weapon,
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
