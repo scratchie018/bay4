@@ -151,6 +151,8 @@ kbd{font:600 11px var(--body);color:var(--bone);background:#2a2e33;border:1px so
 .go-btn:disabled{opacity:.45;cursor:default}
 .netstatus{font-size:13px;color:var(--steel)}
 .ver{font-size:11px;color:#6c757e;letter-spacing:.08em}
+#mapSelect{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 14px var(--body);padding:8px 10px;min-width:200px}
+#teamPick button{padding:7px 10px}
 #mapCode{width:100%;min-height:140px;background:#0c0d0f;color:var(--bone);border:1px solid var(--edge);font:11px ui-monospace,Menlo,monospace;padding:8px;resize:vertical}
 .cxbtn{padding:9px 12px}
 .cxbtn[aria-pressed="true"]{border-color:var(--sodium);color:var(--sodium);background:#26221c}
@@ -212,7 +214,7 @@ tr.me td{color:var(--sodium);font-weight:700}
     </div>
     <div class="hud tc">
       <div id="clock">3:00</div>
-      <div class="sub">You <b id="myK">0</b> / 15 &nbsp;·&nbsp; Leader <b id="lead">none</b></div>
+      <div class="sub" id="hudSub"></div>
     </div>
     <div class="hud" id="cross"><i></i><i></i><i></i><i></i><b></b></div>
     <div class="hud" id="hitm"><i></i><i></i><i></i><i></i></div>
@@ -250,9 +252,13 @@ tr.me td{color:var(--sodium);font-weight:700}
         </div>
       </div>
       <p class="rule">First to 15 kills wins. If nobody gets there, the most kills when the 3:00 clock runs out takes it.</p>
+      <div class="group"><span class="lbl">MATCH</span>
+        <div class="seg" id="teamPick"><button type="button" id="tm-0" data-t="0">Free-for-all</button><button type="button" id="tm-1" data-t="1">1v1</button><button type="button" id="tm-2" data-t="2">2v2</button><button type="button" id="tm-3" data-t="3">3v3</button><button type="button" id="tm-4" data-t="4">4v4</button><button type="button" id="tm-5" data-t="5">5v5</button><button type="button" id="tm-6" data-t="6">6v6</button><button type="button" id="tm-7" data-t="7">7v7</button><button type="button" id="tm-8" data-t="8">8v8</button></div>
+        <div class="netstatus" id="teamStatus"></div>
+      </div>
       <div class="group"><span class="lbl">MAP</span>
         <div class="row">
-          <div class="seg" id="mapPick"><button type="button" id="map-bay4" data-map="bay4">Bay 4</button><button type="button" id="map-custom" data-map="custom">Custom map</button></div>
+          <select id="mapSelect" aria-label="Map"></select>
           <button class="ghost" type="button" id="mapLoadBtn">Load map code</button>
         </div>
         <div class="netstatus" id="mapStatus"></div>
@@ -520,6 +526,22 @@ function buildBay4World() {
 }
 buildBay4World();
 
+/* ---------- built-in maps (made with maps/build_maps.py, same format as Bay Forge) ---------- */
+const BUILTIN_MAPS = [{"id":"dunes","name":"Dunes","about":"Desert town: a long corridor to one site, tunnels to the other, a central lane between. Layout inspired by Dust II.","map":{"v":1,"name":"Dunes","w":80.0,"d":68.0,"wallH":5,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"floor-tinted","wallMat":"plain","ceilMat":"concrete-dark","ambient":1.15,"sky":"#b9d3ec","fog":170,"roof":"none"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0},{"id":"floor-tinted","name":"Map floor","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[40.0,0,1.0],"size":[80.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[16.0,0,3.0],"size":[32.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[64.0,0,3.0],"size":[32.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[2.0,0,36.0],"size":[4.0,5,64.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-4"},{"name":"Wall 5","kind":"solid","shape":"box","pos":[27.0,0,5.0],"size":[10.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-5"},{"name":"Wall 6","kind":"solid","shape":"box","pos":[53.0,0,5.0],"size":[10.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-6"},{"name":"Wall 7","kind":"solid","shape":"box","pos":[78.0,0,36.0],"size":[4.0,5,64.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-7"},{"name":"Wall 8","kind":"solid","shape":"box","pos":[29.0,0,12.0],"size":[14.0,5,4.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-8"},{"name":"Wall 9","kind":"solid","shape":"box","pos":[51.0,0,14.0],"size":[14.0,5,8.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-9"},{"name":"Wall 10","kind":"solid","shape":"box","pos":[29.0,0,26.0],"size":[14.0,5,16.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-10"},{"name":"Wall 11","kind":"solid","shape":"box","pos":[48.0,0,23.0],"size":[8.0,5,10.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-11"},{"name":"Wall 12","kind":"solid","shape":"box","pos":[57.0,0,37.0],"size":[2.0,5,38.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-12"},{"name":"Wall 13","kind":"solid","shape":"box","pos":[6.0,0,44.0],"size":[4.0,5,48.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-13"},{"name":"Wall 14","kind":"solid","shape":"box","pos":[19.0,0,27.0],"size":[6.0,5,14.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-14"},{"name":"Wall 15","kind":"solid","shape":"box","pos":[62.0,0,38.0],"size":[8.0,5,36.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-15"},{"name":"Wall 16","kind":"solid","shape":"box","pos":[75.0,0,44.0],"size":[2.0,5,48.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-16"},{"name":"Wall 17","kind":"solid","shape":"box","pos":[50.0,0,43.0],"size":[12.0,5,22.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-17"},{"name":"Wall 18","kind":"solid","shape":"box","pos":[26.0,0,41.0],"size":[20.0,5,6.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-18"},{"name":"Wall 19","kind":"solid","shape":"box","pos":[25.0,0,49.0],"size":[18.0,5,10.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-19"},{"name":"Wall 20","kind":"solid","shape":"box","pos":[43.0,0,50.0],"size":[2.0,5,8.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-20"},{"name":"Wall 21","kind":"solid","shape":"box","pos":[22.0,0,55.0],"size":[12.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-21"},{"name":"Wall 22","kind":"solid","shape":"box","pos":[55.0,0,55.0],"size":[2.0,5,2.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-22"},{"name":"Wall 23","kind":"solid","shape":"box","pos":[18.0,0,64.0],"size":[20.0,5,8.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-23"},{"name":"Wall 24","kind":"solid","shape":"box","pos":[64.0,0,64.0],"size":[20.0,5,8.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-24"},{"name":"Wall 25","kind":"solid","shape":"box","pos":[41.0,0,66.0],"size":[26.0,5,4.0],"rotY":0,"mat":"plain","tint":"#dcc296","id":"dunes-25"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[10.0,0,10.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-26"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[17.0,0,15.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-27"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[19.0,0,5.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-28"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[66.0,0,10.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-29"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[61.0,0,15.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-30"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[73.0,0,7.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-31"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[37.0,0,25.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-32"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[43.0,0,25.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-33"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[39.0,0,37.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-34"},{"name":"Cover 10","kind":"solid","shape":"box","pos":[69.0,0,31.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-35"},{"name":"Cover 11","kind":"solid","shape":"box","pos":[67.0,0,41.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-36"},{"name":"Cover 12","kind":"solid","shape":"box","pos":[73.0,0,41.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-37"},{"name":"Cover 13","kind":"solid","shape":"box","pos":[33.0,0,59.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-38"},{"name":"Cover 14","kind":"solid","shape":"box","pos":[49.0,0,57.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-39"},{"name":"Cover 15","kind":"solid","shape":"box","pos":[11.0,0,41.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-40"},{"name":"Cover 16","kind":"solid","shape":"box","pos":[69.0,0,57.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"dunes-41"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[31.0,0,59.0],"rotY":-0.346,"id":"dunes-42"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[35.0,0,61.0],"rotY":-0.183,"id":"dunes-43"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[39.0,0,57.0],"rotY":-0.043,"id":"dunes-44"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[41.0,0,61.0],"rotY":0.037,"id":"dunes-45"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[45.0,0,59.0],"rotY":0.197,"id":"dunes-46"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[49.0,0,61.0],"rotY":0.322,"id":"dunes-47"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[51.0,0,57.0],"rotY":0.446,"id":"dunes-48"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[35.0,0,57.0],"rotY":-0.214,"id":"dunes-49"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[33.0,0,5.0],"rotY":-2.905,"id":"dunes-50"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[37.0,0,5.0],"rotY":-3.039,"id":"dunes-51"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[41.0,0,3.0],"rotY":3.109,"id":"dunes-52"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[41.0,0,7.0],"rotY":3.105,"id":"dunes-53"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[45.0,0,3.0],"rotY":2.982,"id":"dunes-54"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[45.0,0,7.0],"rotY":2.958,"id":"dunes-55"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[49.0,0,7.0],"rotY":2.82,"id":"dunes-56"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[53.0,0,7.0],"rotY":2.693,"id":"dunes-57"}],"about":"Desert town: a long corridor to one site, tunnels to the other, a central lane between. Layout inspired by Dust II.","floorTint":"#cdb48a"}},{"id":"plaza","name":"Plaza","about":"Market town: a palace and ramp to one site, apartments to the other, a window room over the middle. Layout inspired by Mirage.","map":{"v":1,"name":"Plaza","w":80.0,"d":68.0,"wallH":5,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"floor-tinted","wallMat":"plain","ceilMat":"concrete-dark","ambient":1.1,"sky":"#c6dcef","fog":170,"roof":"none"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0},{"id":"floor-tinted","name":"Map floor","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[40.0,0,1.0],"size":[80.0,5,2.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[12.0,0,3.0],"size":[24.0,5,2.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[65.0,0,3.0],"size":[30.0,5,2.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[8.0,0,6.0],"size":[16.0,5,4.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-4"},{"name":"Wall 5","kind":"solid","shape":"box","pos":[68.0,0,5.0],"size":[24.0,5,2.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-5"},{"name":"Wall 6","kind":"solid","shape":"box","pos":[78.0,0,37.0],"size":[4.0,5,62.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-6"},{"name":"Wall 7","kind":"solid","shape":"box","pos":[2.0,0,38.0],"size":[4.0,5,60.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-7"},{"name":"Wall 8","kind":"solid","shape":"box","pos":[26.0,0,21.0],"size":[4.0,5,22.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-8"},{"name":"Wall 9","kind":"solid","shape":"box","pos":[41.0,0,14.0],"size":[14.0,5,8.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-9"},{"name":"Wall 10","kind":"solid","shape":"box","pos":[51.0,0,16.0],"size":[6.0,5,4.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-10"},{"name":"Wall 11","kind":"solid","shape":"box","pos":[48.0,0,25.0],"size":[12.0,5,2.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-11"},{"name":"Wall 12","kind":"solid","shape":"box","pos":[32.0,0,29.0],"size":[8.0,5,6.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-12"},{"name":"Wall 13","kind":"solid","shape":"box","pos":[50.0,0,37.0],"size":[12.0,5,22.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-13"},{"name":"Wall 14","kind":"solid","shape":"box","pos":[73.0,0,31.0],"size":[6.0,5,10.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-14"},{"name":"Wall 15","kind":"solid","shape":"box","pos":[7.0,0,48.0],"size":[6.0,5,40.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-15"},{"name":"Wall 16","kind":"solid","shape":"box","pos":[21.0,0,30.0],"size":[6.0,5,4.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-16"},{"name":"Wall 17","kind":"solid","shape":"box","pos":[65.0,0,45.0],"size":[6.0,5,18.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-17"},{"name":"Wall 18","kind":"solid","shape":"box","pos":[27.0,0,47.0],"size":[18.0,5,18.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-18"},{"name":"Wall 19","kind":"solid","shape":"box","pos":[11.0,0,54.0],"size":[2.0,5,28.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-19"},{"name":"Wall 20","kind":"solid","shape":"box","pos":[47.0,0,52.0],"size":[6.0,5,8.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-20"},{"name":"Wall 21","kind":"solid","shape":"box","pos":[60.0,0,51.0],"size":[4.0,5,6.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-21"},{"name":"Wall 22","kind":"solid","shape":"box","pos":[67.0,0,64.0],"size":[18.0,5,8.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-22"},{"name":"Wall 23","kind":"solid","shape":"box","pos":[21.0,0,65.0],"size":[18.0,5,6.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-23"},{"name":"Wall 24","kind":"solid","shape":"box","pos":[55.0,0,65.0],"size":[6.0,5,6.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-24"},{"name":"Wall 25","kind":"solid","shape":"box","pos":[41.0,0,66.0],"size":[22.0,5,4.0],"rotY":0,"mat":"plain","tint":"#e9dcc0","id":"plaza-25"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[64.0,0,14.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-26"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[71.0,0,21.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-27"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[57.0,0,9.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-28"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[12.0,0,16.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-29"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[19.0,0,23.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-30"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[7.0,0,11.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-31"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[35.0,0,21.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-32"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[39.0,0,45.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-33"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[59.0,0,37.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-34"},{"name":"Cover 10","kind":"solid","shape":"box","pos":[71.0,0,45.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-35"},{"name":"Cover 11","kind":"solid","shape":"box","pos":[15.0,0,47.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-36"},{"name":"Cover 12","kind":"solid","shape":"box","pos":[25.0,0,35.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-37"},{"name":"Cover 13","kind":"solid","shape":"box","pos":[35.0,0,59.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-38"},{"name":"Cover 14","kind":"solid","shape":"box","pos":[47.0,0,61.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"plaza-39"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[33.0,0,59.0],"rotY":-0.273,"id":"plaza-40"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[35.0,0,63.0],"rotY":-0.171,"id":"plaza-41"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[39.0,0,59.0],"rotY":-0.04,"id":"plaza-42"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[41.0,0,63.0],"rotY":0.034,"id":"plaza-43"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[45.0,0,59.0],"rotY":0.197,"id":"plaza-44"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[47.0,0,63.0],"rotY":0.237,"id":"plaza-45"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[49.0,0,59.0],"rotY":0.346,"id":"plaza-46"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[37.0,0,55.0],"rotY":-0.142,"id":"plaza-47"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[27.0,0,5.0],"rotY":-2.72,"id":"plaza-48"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[31.0,0,7.0],"rotY":-2.82,"id":"plaza-49"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[35.0,0,5.0],"rotY":-2.971,"id":"plaza-50"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[37.0,0,9.0],"rotY":-3.022,"id":"plaza-51"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[41.0,0,5.0],"rotY":3.107,"id":"plaza-52"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[45.0,0,5.0],"rotY":2.971,"id":"plaza-53"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[49.0,0,3.0],"rotY":2.859,"id":"plaza-54"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[27.0,0,9.0],"rotY":-2.662,"id":"plaza-55"}],"about":"Market town: a palace and ramp to one site, apartments to the other, a window room over the middle. Layout inspired by Mirage.","floorTint":"#d6c7a6"}},{"id":"villa","name":"Villa","about":"Old village: a winding lane to one site, apartments and an arch to the other. Layout inspired by Inferno.","map":{"v":1,"name":"Villa","w":80.0,"d":68.0,"wallH":5,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"floor-tinted","wallMat":"brick","ceilMat":"concrete-dark","ambient":1.05,"sky":"#c7d7e6","fog":160,"roof":"none"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0},{"id":"floor-tinted","name":"Map floor","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[40.0,0,1.0],"size":[80.0,5,2.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[2.0,0,35.0],"size":[4.0,5,66.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[63.0,0,3.0],"size":[34.0,5,2.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[78.0,0,36.0],"size":[4.0,5,64.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-4"},{"name":"Wall 5","kind":"solid","shape":"box","pos":[33.0,0,20.0],"size":[10.0,5,20.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-5"},{"name":"Wall 6","kind":"solid","shape":"box","pos":[50.0,0,16.0],"size":[12.0,5,12.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-6"},{"name":"Wall 7","kind":"solid","shape":"box","pos":[5.0,0,36.0],"size":[2.0,5,36.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-7"},{"name":"Wall 8","kind":"solid","shape":"box","pos":[22.0,0,24.0],"size":[12.0,5,12.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-8"},{"name":"Wall 9","kind":"solid","shape":"box","pos":[15.0,0,38.0],"size":[2.0,5,32.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-9"},{"name":"Wall 10","kind":"solid","shape":"box","pos":[48.0,0,26.0],"size":[8.0,5,8.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-10"},{"name":"Wall 11","kind":"solid","shape":"box","pos":[20.0,0,42.0],"size":[8.0,5,24.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-11"},{"name":"Wall 12","kind":"solid","shape":"box","pos":[59.0,0,40.0],"size":[2.0,5,16.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-12"},{"name":"Wall 13","kind":"solid","shape":"box","pos":[72.0,0,51.0],"size":[8.0,5,34.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-13"},{"name":"Wall 14","kind":"solid","shape":"box","pos":[48.0,0,42.0],"size":[20.0,5,12.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-14"},{"name":"Wall 15","kind":"solid","shape":"box","pos":[36.0,0,47.0],"size":[4.0,5,2.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-15"},{"name":"Wall 16","kind":"solid","shape":"box","pos":[66.0,0,59.0],"size":[4.0,5,18.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-16"},{"name":"Wall 17","kind":"solid","shape":"box","pos":[49.0,0,61.0],"size":[30.0,5,14.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-17"},{"name":"Wall 18","kind":"solid","shape":"box","pos":[30.0,0,65.0],"size":[8.0,5,6.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-18"},{"name":"Wall 19","kind":"solid","shape":"box","pos":[15.0,0,66.0],"size":[22.0,5,4.0],"rotY":0,"mat":"brick","tint":"#d9a98a","id":"villa-19"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[12.0,0,7.0],"size":[3.6,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-20"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[21.0,0,11.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-21"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[9.0,0,31.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-22"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[11.0,0,43.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-23"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[64.0,0,12.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-24"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[71.0,0,19.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-25"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[59.0,0,7.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-26"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[31.0,0,37.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-27"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[49.0,0,51.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-28"},{"name":"Cover 10","kind":"solid","shape":"box","pos":[63.0,0,37.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-29"},{"name":"Cover 11","kind":"solid","shape":"box","pos":[13.0,0,59.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-30"},{"name":"Cover 12","kind":"solid","shape":"box","pos":[21.0,0,57.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-31"},{"name":"Cover 13","kind":"solid","shape":"box","pos":[41.0,0,19.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-32"},{"name":"Cover 14","kind":"solid","shape":"box","pos":[71.0,0,29.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"wood","tint":"#ffffff","id":"villa-33"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[7.0,0,59.0],"rotY":-0.922,"id":"villa-34"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[9.0,0,63.0],"rotY":-0.819,"id":"villa-35"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[11.0,0,57.0],"rotY":-0.9,"id":"villa-36"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[15.0,0,61.0],"rotY":-0.747,"id":"villa-37"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[17.0,0,57.0],"rotY":-0.785,"id":"villa-38"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[19.0,0,63.0],"rotY":-0.627,"id":"villa-39"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[23.0,0,59.0],"rotY":-0.597,"id":"villa-40"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[5.0,0,55.0],"rotY":-1.03,"id":"villa-41"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[31.0,0,5.0],"rotY":-2.841,"id":"villa-42"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[35.0,0,5.0],"rotY":-2.971,"id":"villa-43"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[39.0,0,3.0],"rotY":-3.109,"id":"villa-44"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[39.0,0,7.0],"rotY":-3.105,"id":"villa-45"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[43.0,0,3.0],"rotY":3.045,"id":"villa-46"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[43.0,0,7.0],"rotY":3.031,"id":"villa-47"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[47.0,0,5.0],"rotY":2.905,"id":"villa-48"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[27.0,0,3.0],"rotY":-2.745,"id":"villa-49"}],"about":"Old village: a winding lane to one site, apartments and an arch to the other. Layout inspired by Inferno.","floorTint":"#b9a58e"}},{"id":"shipyard","name":"Shipyard","about":"Container yard at the docks. Lots of cover, lanes between stacks.","map":{"v":1,"name":"Shipyard","w":64.0,"d":48.0,"wallH":5,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"concrete","wallMat":"steel-wall","ceilMat":"concrete-dark","ambient":0.95,"sky":"#93a7bb","fog":120,"roof":"none"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[32.0,0,1.0],"size":[64.0,5,2.0],"rotY":0,"mat":"steel-wall","tint":"#ffffff","id":"shipyard-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[1.0,0,25.0],"size":[2.0,5,46.0],"rotY":0,"mat":"steel-wall","tint":"#ffffff","id":"shipyard-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[63.0,0,25.0],"size":[2.0,5,46.0],"rotY":0,"mat":"steel-wall","tint":"#ffffff","id":"shipyard-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[32.0,0,47.0],"size":[60.0,5,2.0],"rotY":0,"mat":"steel-wall","tint":"#ffffff","id":"shipyard-4"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[13.0,0,9.0],"size":[5.4,3.6,1.8],"rotY":0,"mat":"crate","tint":"#c0563f","id":"shipyard-5"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[11.0,0,21.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#3f7fc0","id":"shipyard-6"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[20.0,0,13.0],"size":[3.6,2.4,1.8],"rotY":0,"mat":"crate","tint":"#4f9a5c","id":"shipyard-7"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[25.0,0,9.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#c9a33b","id":"shipyard-8"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[31.0,0,19.0],"size":[5.4,2.4,1.8],"rotY":0,"mat":"crate","tint":"#c0563f","id":"shipyard-9"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[31.0,0,13.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"crate","tint":"#ffffff","id":"shipyard-10"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[39.0,0,9.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#3f7fc0","id":"shipyard-11"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[44.0,0,13.0],"size":[3.6,2.4,1.8],"rotY":0,"mat":"crate","tint":"#4f9a5c","id":"shipyard-12"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[51.0,0,9.0],"size":[5.4,3.6,1.8],"rotY":0,"mat":"crate","tint":"#c9a33b","id":"shipyard-13"},{"name":"Cover 10","kind":"solid","shape":"box","pos":[53.0,0,21.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#c0563f","id":"shipyard-14"},{"name":"Cover 11","kind":"solid","shape":"box","pos":[13.0,0,29.0],"size":[5.4,3.6,1.8],"rotY":0,"mat":"crate","tint":"#4f9a5c","id":"shipyard-15"},{"name":"Cover 12","kind":"solid","shape":"box","pos":[20.0,0,33.0],"size":[3.6,2.4,1.8],"rotY":0,"mat":"crate","tint":"#3f7fc0","id":"shipyard-16"},{"name":"Cover 13","kind":"solid","shape":"box","pos":[25.0,0,37.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#c0563f","id":"shipyard-17"},{"name":"Cover 14","kind":"solid","shape":"box","pos":[33.0,0,27.0],"size":[5.4,2.4,1.8],"rotY":0,"mat":"crate","tint":"#c9a33b","id":"shipyard-18"},{"name":"Cover 15","kind":"solid","shape":"box","pos":[33.0,0,33.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"crate","tint":"#ffffff","id":"shipyard-19"},{"name":"Cover 16","kind":"solid","shape":"box","pos":[39.0,0,37.0],"size":[1.8,3.6,5.4],"rotY":0,"mat":"crate","tint":"#4f9a5c","id":"shipyard-20"},{"name":"Cover 17","kind":"solid","shape":"box","pos":[44.0,0,33.0],"size":[3.6,2.4,1.8],"rotY":0,"mat":"crate","tint":"#c0563f","id":"shipyard-21"},{"name":"Cover 18","kind":"solid","shape":"box","pos":[51.0,0,39.0],"size":[5.4,3.6,1.8],"rotY":0,"mat":"crate","tint":"#3f7fc0","id":"shipyard-22"},{"name":"Cover 19","kind":"solid","shape":"box","pos":[59.0,0,25.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"crate","tint":"#ffffff","id":"shipyard-23"},{"name":"Cover 20","kind":"solid","shape":"box","pos":[5.0,0,23.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"crate","tint":"#ffffff","id":"shipyard-24"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[5.0,0,7.0],"rotY":-2.133,"id":"shipyard-25"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[5.0,0,13.0],"rotY":-1.958,"id":"shipyard-26"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[5.0,0,19.0],"rotY":-1.754,"id":"shipyard-27"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[5.0,0,29.0],"rotY":-1.388,"id":"shipyard-28"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[5.0,0,35.0],"rotY":-1.184,"id":"shipyard-29"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[5.0,0,41.0],"rotY":-1.009,"id":"shipyard-30"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[7.0,0,25.0],"rotY":-1.531,"id":"shipyard-31"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[9.0,0,13.0],"rotY":-2.017,"id":"shipyard-32"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[59.0,0,7.0],"rotY":2.133,"id":"shipyard-33"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[59.0,0,13.0],"rotY":1.958,"id":"shipyard-34"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[59.0,0,19.0],"rotY":1.754,"id":"shipyard-35"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[59.0,0,29.0],"rotY":1.388,"id":"shipyard-36"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[59.0,0,35.0],"rotY":1.184,"id":"shipyard-37"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[59.0,0,41.0],"rotY":1.009,"id":"shipyard-38"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[57.0,0,23.0],"rotY":1.611,"id":"shipyard-39"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[55.0,0,31.0],"rotY":1.275,"id":"shipyard-40"}],"about":"Container yard at the docks. Lots of cover, lanes between stacks."}},{"id":"arena","name":"Arena","about":"Small mirrored arena for 1v1 and 2v2. Pillars and low walls, nowhere to hide for long.","map":{"v":1,"name":"Arena","w":36.0,"d":36.0,"wallH":5,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"diamond","wallMat":"concrete-dark","ceilMat":"concrete-dark","ambient":0.7,"sky":"#1a1d22","fog":80,"roof":"solid"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[18.0,0,1.0],"size":[36.0,5,2.0],"rotY":0,"mat":"concrete-dark","tint":"#ffffff","id":"arena-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[1.0,0,19.0],"size":[2.0,5,34.0],"rotY":0,"mat":"concrete-dark","tint":"#ffffff","id":"arena-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[35.0,0,19.0],"size":[2.0,5,34.0],"rotY":0,"mat":"concrete-dark","tint":"#ffffff","id":"arena-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[18.0,0,35.0],"size":[32.0,5,2.0],"rotY":0,"mat":"concrete-dark","tint":"#ffffff","id":"arena-4"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[11.0,0,11.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-5"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[25.0,0,11.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-6"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[11.0,0,25.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-7"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[25.0,0,25.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-8"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[18.0,0,7.0],"size":[3.6,1.2,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-9"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[18.0,0,29.0],"size":[3.6,1.2,1.8],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-10"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[7.0,0,18.0],"size":[1.8,1.2,3.6],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-11"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[29.0,0,18.0],"size":[1.8,1.2,3.6],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-12"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[18.0,0,18.0],"size":[3.6,2.4,3.6],"rotY":0,"mat":"hazard","tint":"#ffffff","id":"arena-13"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[5.0,0,31.0],"rotY":-0.785,"id":"arena-14"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[9.0,0,31.0],"rotY":-0.606,"id":"arena-15"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[5.0,0,27.0],"rotY":-0.965,"id":"arena-16"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[13.0,0,31.0],"rotY":-0.367,"id":"arena-17"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[5.0,0,23.0],"rotY":-1.204,"id":"arena-18"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[17.0,0,31.0],"rotY":-0.077,"id":"arena-19"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[21.0,0,31.0],"rotY":0.227,"id":"arena-20"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[5.0,0,19.0],"rotY":-1.494,"id":"arena-21"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[31.0,0,5.0],"rotY":2.356,"id":"arena-22"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[27.0,0,5.0],"rotY":2.536,"id":"arena-23"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[31.0,0,9.0],"rotY":2.176,"id":"arena-24"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[23.0,0,5.0],"rotY":2.774,"id":"arena-25"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[31.0,0,13.0],"rotY":1.938,"id":"arena-26"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[19.0,0,5.0],"rotY":3.065,"id":"arena-27"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[15.0,0,5.0],"rotY":-2.915,"id":"arena-28"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[31.0,0,17.0],"rotY":1.648,"id":"arena-29"},{"name":"Lamp 1","kind":"lamp","pos":[9.0,5.2,9.0],"light":{"color":"#ffd7a0","int":1.5,"range":24},"id":"arena-30"},{"name":"Lamp 2","kind":"lamp","pos":[27.0,5.2,9.0],"light":{"color":"#ffd7a0","int":1.5,"range":24},"id":"arena-31"},{"name":"Lamp 3","kind":"lamp","pos":[9.0,5.2,27.0],"light":{"color":"#ffd7a0","int":1.5,"range":24},"id":"arena-32"},{"name":"Lamp 4","kind":"lamp","pos":[27.0,5.2,27.0],"light":{"color":"#ffd7a0","int":1.5,"range":24},"id":"arena-33"},{"name":"Lamp 5","kind":"lamp","pos":[17.0,5.2,17.0],"light":{"color":"#ffd7a0","int":1.5,"range":24},"id":"arena-34"}],"about":"Small mirrored arena for 1v1 and 2v2. Pillars and low walls, nowhere to hide for long."}},{"id":"lab","name":"Lab","about":"Indoor research lab: offices, a server hall and long corridors under strip lights.","map":{"v":1,"name":"Lab","w":60.0,"d":48.0,"wallH":4,"walls":true,"wallSides":{"n":true,"s":true,"w":true,"e":true},"floor":true,"fallDepth":25,"env":{"floorMat":"floor-tinted","wallMat":"plain","ceilMat":"concrete-dark","ambient":0.45,"sky":"#0c0e11","fog":70,"roof":"solid"},"materials":[{"id":"concrete","name":"Concrete","type":"builtin","gen":"concrete","tile":2,"rough":0.92,"metal":0},{"id":"concrete-dark","name":"Dark concrete","type":"builtin","gen":"concreteDark","tile":2,"rough":0.9,"metal":0},{"id":"crate","name":"Steel crate","type":"builtin","gen":"crate","tile":2.4,"rough":0.75,"metal":0.15},{"id":"hazard","name":"Hazard stripes","type":"builtin","gen":"hazard","tile":1,"rough":0.8,"metal":0},{"id":"diamond","name":"Diamond plate","type":"builtin","gen":"diamond","tile":1,"rough":0.45,"metal":0.6},{"id":"steel-wall","name":"Steel wall","type":"builtin","gen":"steelWall","tile":3,"rough":0.8,"metal":0.2},{"id":"brick","name":"Brick","type":"builtin","gen":"brick","tile":1.2,"rough":0.9,"metal":0},{"id":"wood","name":"Wood planks","type":"builtin","gen":"wood","tile":1.6,"rough":0.85,"metal":0},{"id":"tile","name":"Floor tile","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0},{"id":"grass","name":"Grass","type":"builtin","gen":"grass","tile":2,"rough":1,"metal":0},{"id":"plain","name":"Plain (tint me)","type":"builtin","gen":"plain","tile":1,"rough":0.8,"metal":0},{"id":"floor-tinted","name":"Map floor","type":"builtin","gen":"tile","tile":1,"rough":0.5,"metal":0}],"models":[],"objects":[{"name":"Wall 1","kind":"solid","shape":"box","pos":[30.0,0,1.0],"size":[60.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-1"},{"name":"Wall 2","kind":"solid","shape":"box","pos":[1.0,0,25.0],"size":[2.0,4,46.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-2"},{"name":"Wall 3","kind":"solid","shape":"box","pos":[20.0,0,4.0],"size":[4.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-3"},{"name":"Wall 4","kind":"solid","shape":"box","pos":[40.0,0,4.0],"size":[4.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-4"},{"name":"Wall 5","kind":"solid","shape":"box","pos":[59.0,0,25.0],"size":[2.0,4,46.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-5"},{"name":"Wall 6","kind":"solid","shape":"box","pos":[20.0,0,15.0],"size":[4.0,4,10.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-6"},{"name":"Wall 7","kind":"solid","shape":"box","pos":[40.0,0,15.0],"size":[4.0,4,10.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-7"},{"name":"Wall 8","kind":"solid","shape":"box","pos":[25.0,0,16.0],"size":[6.0,4,8.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-8"},{"name":"Wall 9","kind":"solid","shape":"box","pos":[35.0,0,16.0],"size":[6.0,4,8.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-9"},{"name":"Wall 10","kind":"solid","shape":"box","pos":[5.0,0,18.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-10"},{"name":"Wall 11","kind":"solid","shape":"box","pos":[15.0,0,18.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-11"},{"name":"Wall 12","kind":"solid","shape":"box","pos":[45.0,0,18.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-12"},{"name":"Wall 13","kind":"solid","shape":"box","pos":[55.0,0,18.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-13"},{"name":"Wall 14","kind":"solid","shape":"box","pos":[5.0,0,30.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-14"},{"name":"Wall 15","kind":"solid","shape":"box","pos":[20.0,0,30.0],"size":[16.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-15"},{"name":"Wall 16","kind":"solid","shape":"box","pos":[40.0,0,30.0],"size":[16.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-16"},{"name":"Wall 17","kind":"solid","shape":"box","pos":[55.0,0,30.0],"size":[6.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-17"},{"name":"Wall 18","kind":"solid","shape":"box","pos":[23.0,0,34.0],"size":[10.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-18"},{"name":"Wall 19","kind":"solid","shape":"box","pos":[37.0,0,34.0],"size":[10.0,4,4.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-19"},{"name":"Wall 20","kind":"solid","shape":"box","pos":[20.0,0,37.0],"size":[4.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-20"},{"name":"Wall 21","kind":"solid","shape":"box","pos":[40.0,0,37.0],"size":[4.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-21"},{"name":"Wall 22","kind":"solid","shape":"box","pos":[20.0,0,45.0],"size":[4.0,4,6.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-22"},{"name":"Wall 23","kind":"solid","shape":"box","pos":[40.0,0,45.0],"size":[4.0,4,6.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-23"},{"name":"Wall 24","kind":"solid","shape":"box","pos":[10.0,0,47.0],"size":[16.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-24"},{"name":"Wall 25","kind":"solid","shape":"box","pos":[30.0,0,47.0],"size":[16.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-25"},{"name":"Wall 26","kind":"solid","shape":"box","pos":[50.0,0,47.0],"size":[16.0,4,2.0],"rotY":0,"mat":"plain","tint":"#cfd6dc","id":"lab-26"},{"name":"Cover 1","kind":"solid","shape":"box","pos":[25.0,0,23.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-27"},{"name":"Cover 2","kind":"solid","shape":"box","pos":[35.0,0,23.0],"size":[1.8,2.4,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-28"},{"name":"Cover 3","kind":"solid","shape":"box","pos":[15.0,0,23.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-29"},{"name":"Cover 4","kind":"solid","shape":"box","pos":[45.0,0,23.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-30"},{"name":"Cover 5","kind":"solid","shape":"box","pos":[27.0,0,41.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-31"},{"name":"Cover 6","kind":"solid","shape":"box","pos":[33.0,0,41.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-32"},{"name":"Cover 7","kind":"solid","shape":"box","pos":[27.0,0,7.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-33"},{"name":"Cover 8","kind":"solid","shape":"box","pos":[33.0,0,7.0],"size":[1.8,3.6,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-34"},{"name":"Cover 9","kind":"solid","shape":"box","pos":[8.0,0,7.0],"size":[3.6,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-35"},{"name":"Cover 10","kind":"solid","shape":"box","pos":[52.0,0,41.0],"size":[3.6,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-36"},{"name":"Cover 11","kind":"solid","shape":"box","pos":[7.0,0,39.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-37"},{"name":"Cover 12","kind":"solid","shape":"box","pos":[53.0,0,7.0],"size":[1.8,1.2,1.8],"rotY":0,"mat":"plain","tint":"#6f7b86","id":"lab-38"},{"name":"Spawn A1","kind":"spawn","team":"A","pos":[5.0,0,37.0],"rotY":-1.091,"id":"lab-39"},{"name":"Spawn A2","kind":"spawn","team":"A","pos":[5.0,0,43.0],"rotY":-0.921,"id":"lab-40"},{"name":"Spawn A3","kind":"spawn","team":"A","pos":[11.0,0,43.0],"rotY":-0.785,"id":"lab-41"},{"name":"Spawn A4","kind":"spawn","team":"A","pos":[15.0,0,37.0],"rotY":-0.857,"id":"lab-42"},{"name":"Spawn A5","kind":"spawn","team":"A","pos":[25.0,0,43.0],"rotY":-0.257,"id":"lab-43"},{"name":"Spawn A6","kind":"spawn","team":"A","pos":[35.0,0,43.0],"rotY":0.257,"id":"lab-44"},{"name":"Spawn A7","kind":"spawn","team":"A","pos":[45.0,0,43.0],"rotY":0.668,"id":"lab-45"},{"name":"Spawn A8","kind":"spawn","team":"A","pos":[55.0,0,39.0],"rotY":1.03,"id":"lab-46"},{"name":"Spawn B1","kind":"spawn","team":"B","pos":[5.0,0,5.0],"rotY":-2.221,"id":"lab-47"},{"name":"Spawn B2","kind":"spawn","team":"B","pos":[15.0,0,5.0],"rotY":-2.473,"id":"lab-48"},{"name":"Spawn B3","kind":"spawn","team":"B","pos":[25.0,0,5.0],"rotY":-2.884,"id":"lab-49"},{"name":"Spawn B4","kind":"spawn","team":"B","pos":[35.0,0,5.0],"rotY":2.884,"id":"lab-50"},{"name":"Spawn B5","kind":"spawn","team":"B","pos":[45.0,0,5.0],"rotY":2.473,"id":"lab-51"},{"name":"Spawn B6","kind":"spawn","team":"B","pos":[55.0,0,5.0],"rotY":2.221,"id":"lab-52"},{"name":"Spawn B7","kind":"spawn","team":"B","pos":[55.0,0,11.0],"rotY":2.05,"id":"lab-53"},{"name":"Spawn B8","kind":"spawn","team":"B","pos":[5.0,0,11.0],"rotY":-2.05,"id":"lab-54"},{"name":"Lamp 1","kind":"lamp","pos":[9.0,3.7,9.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-55"},{"name":"Lamp 2","kind":"lamp","pos":[29.0,3.7,7.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-56"},{"name":"Lamp 3","kind":"lamp","pos":[51.0,3.7,9.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-57"},{"name":"Lamp 4","kind":"lamp","pos":[9.0,3.7,25.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-58"},{"name":"Lamp 5","kind":"lamp","pos":[29.0,3.7,25.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-59"},{"name":"Lamp 6","kind":"lamp","pos":[51.0,3.7,25.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-60"},{"name":"Lamp 7","kind":"lamp","pos":[9.0,3.7,41.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-61"},{"name":"Lamp 8","kind":"lamp","pos":[29.0,3.7,41.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-62"},{"name":"Lamp 9","kind":"lamp","pos":[51.0,3.7,41.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-63"},{"name":"Lamp 10","kind":"lamp","pos":[19.0,3.7,17.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-64"},{"name":"Lamp 11","kind":"lamp","pos":[41.0,3.7,33.0],"light":{"color":"#e8f2ff","int":1.5,"range":24},"id":"lab-65"}],"about":"Indoor research lab: offices, a server hall and long corridors under strip lights.","floorTint":"#aeb7bf"}}];
+
+/* ---------- teams ---------- */
+let TEAM = 0;   // 0 = free-for-all, otherwise players per team
+const TEAMS = [{ name:'Hooks', color:'#e0a040' }, { name:'Rings', color:'#5a9fd6' }];
+const BOT_NAMES = ['Vex','Moth','Kestrel','Ozone','Lark','Grit','Saffi','Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'];
+const enemy = (a, b) => !TEAM || a.team !== b.team;
+const teamTarget = () => 10 + 5*(TEAM - 1);
+function teamScore(t) { return ents.filter(e => e.team === t).reduce((s, e) => s + e.kills, 0); }
+function teamShade(t, i) {
+  const n = parseInt(TEAMS[t].color.slice(1), 16), k = .78 + (i % 4)*.09;
+  const c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.min(255, Math.round(v*k)));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
 /* ---------- custom maps (from Bay Forge) ---------- */
 function canvasOf(size, draw) { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); return c; }
 const noiseDots = (g, s, n, a, light = true) => { for (let i = 0; i < n; i++) { g.fillStyle = `rgba(${light ? '255,255,255' : '0,0,0'},${Math.random()*a})`; g.fillRect(Math.random()*s, Math.random()*s, 1 + Math.random()*2, 1 + Math.random()*2); } };
@@ -627,7 +649,7 @@ function clearWorld() {
   for (const t of mapTex.values()) t.dispose(); mapTex.clear(); mapModels.clear();
 }
 function setBay4() {
-  clearWorld(); currentMap = { id:'bay4', name:'Bay 4', data:null };
+  NAV = null; clearWorld(); currentMap = { id:'bay4', name:'Bay 4', data:null };
   W = 2000; H = 1400; RECTS = BAY4.RECTS.slice(); SPAWNS = BAY4.SPAWNS.slice(); LAMPS = BAY4.LAMPS.slice();
   scene.background = new THREE.Color(0x0a0b0d); scene.fog = new THREE.Fog(0x0a0b0d, 22, 64); hemi.intensity = .55;
   buildBay4World(); buildFloor();
@@ -639,6 +661,7 @@ function footprintM(o) {
 }
 function setCustomMap(md, code) {
   clearWorld();
+  NAV = null;
   currentMap = { id:hashText(code), name:String(md.name || 'Custom map').slice(0, 40), data:md, code };
   md.wallSides = md.wallSides || { n:md.walls !== false, s:md.walls !== false, w:md.walls !== false, e:md.walls !== false };
   const env = md.env || {}, mw = clamp(+md.w || 40, 10, 200), mdp = clamp(+md.d || 30, 10, 200), WH = clamp(+md.wallH || 5.5, 1, 30);
@@ -647,7 +670,7 @@ function setCustomMap(md, code) {
   scene.fog = env.fog > 0 ? new THREE.Fog(env.sky || '#0a0b0d', env.fog*.35, env.fog) : null;
   hemi.intensity = Number.isFinite(+env.ambient) ? +env.ambient : .55;
   if (md.floor !== false) {
-    const fl = new THREE.Mesh(boxGeo(mw, .02, mdp), mapMaterial(md, env.floorMat || 'concrete')); fl.position.set(mw/2, -.01, mdp/2); WG.add(fl); solids.push(fl);
+    const fl = new THREE.Mesh(boxGeo(mw, .02, mdp), mapMaterial(md, env.floorMat || 'concrete', /^#[0-9a-f]{6}$/i.test(md.floorTint) ? md.floorTint : '#ffffff')); fl.position.set(mw/2, -.01, mdp/2); WG.add(fl); solids.push(fl);
   }
   const decal = new THREE.Mesh(new THREE.PlaneGeometry(mw, mdp), new THREE.MeshBasicMaterial({ map:floorTex, transparent:true, depthWrite:false }));
   decal.rotation.x = -Math.PI/2; decal.position.set(mw/2, .006, mdp/2); WG.add(decal);
@@ -665,7 +688,7 @@ function setCustomMap(md, code) {
   for (const o of md.objects || []) {
     if (o.hidden || !Array.isArray(o.pos)) continue;
     const px = o.pos[0], py = o.pos[1] || 0, pz = o.pos[2];
-    if (o.kind === 'spawn') { SPAWNS.push({ x:px/S, y:pz/S, ang:-(o.rotY || 0) - Math.PI/2 }); continue; }
+    if (o.kind === 'spawn') { SPAWNS.push({ x:px/S, y:pz/S, ang:-(o.rotY || 0) - Math.PI/2, team:o.team === 'A' ? 0 : o.team === 'B' ? 1 : undefined }); continue; }
     if (o.kind === 'lamp') {
       const L = o.light || {}, col = /^#[0-9a-f]{6}$/i.test(L.color) ? L.color : '#ffa548';
       if (lights++ < 12) { const pl = new THREE.PointLight(col, L.int ?? 1.5, L.range ?? 26, 1.4); pl.position.set(px, py - .2, pz); WG.add(pl); }
@@ -809,17 +832,23 @@ function buildFighter(e) {
 /* ---------- entities ---------- */
 let ents = [], player = null, diff = 'veteran', finish = 'fade', mode = 'knife', sens = 1;
 function mk(name, color, fin, isPlayer) {
-  return { name, color, finish:fin, isPlayer, x:0, y:0, vx:0, vy:0, ang:0, pitch:0, r:16, hp:100, alive:false, respawn:0,
+  return { name, color, finish:fin, isPlayer, team:0, x:0, y:0, vx:0, vy:0, ang:0, pitch:0, r:16, hp:100, alive:false, respawn:0,
     kills:0, deaths:0, streak:0, best:0, cd:0, swing:null, side:1, dashT:0, dashCd:0, dashX:0, dashY:0,
     sinceHit:9, inspect:0, flash:0, prot:0, deadT:0, walk:0, jumpY:0, jumpV:0, revealT:0, dashPose:0, ghostT:0, seed:rand(0, 6.3),
     weapon: mode === 'awp' ? 'awp' : 'knife', lastWeapon:'knife', ammo:AWP.mag, reloadT:0, zoom:0, rezoom:0, drawT:0,
     ai:{ think:rand(0,.3), target:null, strafe:Math.random()<.5?1:-1, goal:null, retreat:0, flank:false, mx:0, my:0, aim:0 } };
 }
 function spawn(e) {
-  let best = SPAWNS[0], bd = -1;
-  for (const s of SPAWNS) {
+  let pool = SPAWNS;
+  if (TEAM) {
+    const tagged = SPAWNS.filter(s => s.team === e.team);
+    pool = tagged.length ? tagged : SPAWNS.filter(s => (s.x < W/2) === (e.team === 0));
+    if (!pool.length) pool = SPAWNS;
+  }
+  let best = pool[0], bd = -1;
+  for (const s of pool) {
     let m = 1e9;
-    for (const o of ents) if (o !== e && o.alive) m = Math.min(m, Math.hypot(o.x-s.x, o.y-s.y));
+    for (const o of ents) if (o !== e && o.alive && enemy(e, o)) m = Math.min(m, Math.hypot(o.x-s.x, o.y-s.y));
     m += rand(0, 140);
     if (m > bd) { bd = m; best = s; }
   }
@@ -850,7 +879,7 @@ function updSwing(e, dt) {
   if (s.type === 'stab' && prev < Sp.wind && s.t >= Sp.wind) { e.vx += Math.cos(e.ang)*320; e.vy += Math.sin(e.ang)*320; }
   if (s.t >= Sp.wind && prev <= Sp.act && !e.remote) {
     for (const o of ents) {
-      if (o === e || !o.alive || s.hit.has(o)) continue;
+      if (o === e || !o.alive || s.hit.has(o) || !enemy(e, o)) continue;
       const dx = o.x-e.x, dy = o.y-e.y, d = Math.hypot(dx, dy)-o.r;
       if (d > Sp.range) continue;
       if (d > 4 && Math.abs(angDiff(Math.atan2(dy, dx), e.ang)) > Sp.arc) continue;
@@ -895,7 +924,10 @@ function kill(a, o, how) {
     o.killer = a;
     if (NET.on) NET.died = { q:++NET.seq, by:a.peer || null, w:how.weapon, hs:how.hs ? 1 : 0, ns:how.noscope ? 1 : 0, bk:how.behind ? 1 : 0 };
   }
-  if (!NET.on && a.kills >= LIMIT) endMatch(`${a.isPlayer ? 'You' : a.name} reached ${LIMIT} kills`);
+  if (!NET.on) {
+    if (TEAM) { if (teamScore(a.team) >= teamTarget()) endMatch(`${TEAMS[a.team].name} reached ${teamTarget()} kills`); }
+    else if (a.kills >= LIMIT) endMatch(`${a.isPlayer ? 'You' : a.name} reached ${LIMIT} kills`);
+  }
 }
 
 /* ---------- AWP shots ---------- */
@@ -939,7 +971,7 @@ function playerFire() {
   if (h && h.object.userData.ent) {
     const part = h.object.userData.part;
     const tgt = h.object.userData.ent, how = { weapon:'awp', hs:part === 'head', noscope:!scoped };
-    if (tgt.remote) netHit(p, tgt, part === 'legs' ? 85 : 999, how); else damage(p, tgt, part === 'legs' ? 85 : 999, how);
+    if (!enemy(p, tgt)) {} else if (tgt.remote) netHit(p, tgt, part === 'legs' ? 85 : 999, how); else damage(p, tgt, part === 'legs' ? 85 : 999, how);
   }
   p.rezoom = scoped ? p.zoom : 0; p.zoom = 0;
   vmKick = 1; shake = Math.max(shake, 2.5); p.pitch = clamp(p.pitch + .025, -1.45, 1.45);
@@ -1002,6 +1034,67 @@ function updParts(dt) {
 }
 
 /* ---------- AI ---------- */
+/* ---------- bot navigation: A* over a 1 m grid of the map, rebuilt whenever the map changes ---------- */
+let NAV = null;
+const NC = 40;
+function buildNav() {
+  const cw = Math.ceil(W/NC), ch = Math.ceil(H/NC), g = new Uint8Array(cw*ch);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) g[y*cw + x] = inRect((x + .5)*NC, (y + .5)*NC, 13) ? 1 : 0;
+  NAV = { cw, ch, g, w:W, h:H };
+}
+const clearLine = (x1, y1, x2, y2) => !RECTS.some(r => segRect(x1, y1, x2, y2, { x:r.x - 10, y:r.y - 10, w:r.w + 20, h:r.h + 20 }));
+function navPath(sx, sy, tx, ty) {
+  if (!NAV || NAV.w !== W || NAV.h !== H) buildNav();
+  const { cw, ch, g } = NAV, cell = (x, y) => clamp(Math.floor(y/NC), 0, ch - 1)*cw + clamp(Math.floor(x/NC), 0, cw - 1);
+  const free = i => !g[i];
+  let start = cell(sx, sy), goal = cell(tx, ty);
+  // if the goal cell is blocked, aim for the nearest open cell around it
+  if (!free(goal)) { let best = -1, bd = 1e9; const gx = goal % cw, gy = goal/cw | 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const x = gx + dx, y = gy + dy; if (x < 0 || y < 0 || x >= cw || y >= ch) continue; const i = y*cw + x; if (free(i) && dx*dx + dy*dy < bd) { bd = dx*dx + dy*dy; best = i; } }
+    if (best < 0) return null; goal = best; }
+  const n = cw*ch, gs = new Float32Array(n).fill(1e9), from = new Int32Array(n).fill(-1), closed = new Uint8Array(n);
+  const heap = [], push = (i, f) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2*k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  const hx = goal % cw, hy = goal/cw | 0, h = i => Math.hypot((i % cw) - hx, (i/cw | 0) - hy);
+  gs[start] = 0; push(start, h(start));
+  let steps = 0;
+  while (heap.length && steps++ < 20000) {
+    const [, i] = pop(); if (closed[i]) continue; closed[i] = 1;
+    if (i === goal) break;
+    const x = i % cw, y = i/cw | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+      const j = ny*cw + nx; if (!free(j) || closed[j]) continue;
+      if (dx && dy && (!free(y*cw + nx) || !free(ny*cw + x))) continue;   // no cutting corners
+      const ng = gs[i] + (dx && dy ? 1.414 : 1);
+      if (ng < gs[j]) { gs[j] = ng; from[j] = i; push(j, ng + h(j)); }
+    }
+  }
+  if (from[goal] < 0 && goal !== start) return null;
+  const pts = []; for (let i = goal; i >= 0 && i !== start; i = from[i]) pts.push({ x:(i % cw + .5)*NC, y:((i/cw | 0) + .5)*NC });
+  pts.reverse();
+  // string-pull: drop waypoints we can see past
+  const out = []; let ax = sx, ay = sy;
+  for (let k = 0; k < pts.length; k++) { const nxt = pts[k + 1]; if (nxt && clearLine(ax, ay, nxt.x, nxt.y)) continue; out.push(pts[k]); ax = pts[k].x; ay = pts[k].y; }
+  return out;
+}
+// where a bot should walk to reach (tx, ty): straight there if it can, else along a path around walls
+function navTarget(e, tx, ty, dt) {
+  if (clearLine(e.x, e.y, tx, ty)) { e.ai.path = null; return [tx, ty]; }
+  const A = e.ai; A.pathT = (A.pathT || 0) - dt;
+  if (!A.path || A.pathT <= 0 || Math.hypot((A.pathGoal || {}).x - tx, (A.pathGoal || {}).y - ty) > 80) {
+    A.path = navPath(e.x, e.y, tx, ty); A.pathT = .6 + Math.random()*.3; A.pathGoal = { x:tx, y:ty };
+  }
+  while (A.path && A.path.length && Math.hypot(A.path[0].x - e.x, A.path[0].y - e.y) < 28) A.path.shift();
+  if (A.path && A.path.length) return [A.path[0].x, A.path[0].y];
+  return [tx, ty];
+}
+// a place to go when nobody is in sight: usually toward an enemy, sometimes anywhere
+function huntPoint(e) {
+  const foes = ents.filter(o => o !== e && o.alive && enemy(e, o));
+  if (foes.length && Math.random() < .7) { const f = foes[Math.floor(Math.random()*foes.length)]; return { x:f.x + rand(-80, 80), y:f.y + rand(-80, 80) }; }
+  return openPoint();
+}
 function turnToward(e, a, max) { e.ang += clamp(angDiff(a, e.ang), -max, max); }
 function avoid(e, mx, my) {
   if ((mx || my) && inRect(e.x+mx*34, e.y+my*34, e.r-4)) {
@@ -1019,7 +1112,7 @@ function aiKnife(e, dt) {
     A.think = D.react*rand(.7, 1.3);
     let best = null, bs = 1e9;
     for (const o of ents) {
-      if (o === e || !o.alive) continue;
+      if (o === e || !o.alive || !enemy(e, o)) continue;
       const d = Math.hypot(o.x-e.x, o.y-e.y);
       if (d > 650 || (d > 140 && !los(e, o))) continue;
       const sc = d - (100-o.hp)*1.2 - (o === A.target ? 90 : 0);
@@ -1027,7 +1120,7 @@ function aiKnife(e, dt) {
     }
     A.target = best; A.flank = Math.random() < D.back;
     if (Math.random() < .3) A.strafe *= -1;
-    if (!best && (!A.goal || Math.hypot(A.goal.x-e.x, A.goal.y-e.y) < 60)) A.goal = openPoint();
+    if (!best && (!A.goal || Math.hypot(A.goal.x-e.x, A.goal.y-e.y) < 60 || Math.random() < .08)) A.goal = huntPoint(e);
   }
   const T = A.target && A.target.alive ? A.target : null;
   let tx = e.x, ty = e.y;
@@ -1053,6 +1146,7 @@ function aiKnife(e, dt) {
     if (A.goal) { tx = A.goal.x; ty = A.goal.y; }
     turnToward(e, Math.atan2(ty-e.y, tx-e.x), D.turn*dt*.6);
   }
+  if (tx !== e.x || ty !== e.y) [tx, ty] = navTarget(e, tx, ty, dt);
   let mx = tx-e.x, my = ty-e.y; const m = Math.hypot(mx, my);
   if (m > 6) { mx /= m; my /= m; } else { mx = my = 0; }
   [A.mx, A.my] = avoid(e, mx, my);
@@ -1064,14 +1158,14 @@ function aiAwp(e, dt) {
     A.think = D.react*rand(.7, 1.3);
     let best = null, bs = 1e9;
     for (const o of ents) {
-      if (o === e || !o.alive || !los(e, o)) continue;
+      if (o === e || !o.alive || !enemy(e, o) || !los(e, o)) continue;
       const d = Math.hypot(o.x-e.x, o.y-e.y); if (d > 1800) continue;
       const sc = d - (o === A.target ? 200 : 0) - (o.revealT > 0 ? 150 : 0);
       if (sc < bs) { bs = sc; best = o; }
     }
     if (best !== A.target) { A.target = best; A.aim = 0; }
     if (Math.random() < .3) A.strafe *= -1;
-    if (!best && (!A.goal || Math.hypot(A.goal.x-e.x, A.goal.y-e.y) < 60)) A.goal = openPoint();
+    if (!best && (!A.goal || Math.hypot(A.goal.x-e.x, A.goal.y-e.y) < 60 || Math.random() < .08)) A.goal = huntPoint(e);
   }
   const T = A.target && A.target.alive && los(e, A.target) ? A.target : null;
   let mx = 0, my = 0;
@@ -1084,7 +1178,8 @@ function aiAwp(e, dt) {
   } else {
     A.aim = Math.max(0, A.aim - dt);
     if (A.goal) {
-      mx = A.goal.x-e.x; my = A.goal.y-e.y; const m = Math.hypot(mx, my);
+      const [gx, gy] = navTarget(e, A.goal.x, A.goal.y, dt);
+      mx = gx-e.x; my = gy-e.y; const m = Math.hypot(mx, my);
       if (m > 6) { mx /= m; my /= m; } else mx = my = 0;
       if (mx || my) turnToward(e, Math.atan2(my, mx), D.turn*dt*.5);
     }
@@ -1278,8 +1373,14 @@ function callout(big, small) {
 let hitT = 0;
 function hitMark(isKill) { hitT = .22; $('hitm').classList.toggle('kill', isKill); }
 function standings() { return [...ents].sort((a, b) => b.kills-a.kills || a.deaths-b.deaths); }
+const escH = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 function renderBoard(host) {
-  const rows = standings().map((e, i) => `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i+1}</td><td><span class="dot" style="background:${e.isPlayer ? 'var(--sodium)' : e.color}"></span>${e.name}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${e.best}</td></tr>`).join('');
+  if (TEAM) {
+    const row = (e, i) => `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i+1}</td><td><span class="dot" style="background:${e.color}"></span>${escH(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${e.best}</td></tr>`;
+    host.innerHTML = [0, 1].map(t => `<table><thead><tr><th></th><th style="color:${TEAMS[t].color}">${TEAMS[t].name.toUpperCase()} · ${teamScore(t)}</th><th>K</th><th>D</th><th>BEST STREAK</th></tr></thead><tbody>${standings().filter(e => e.team === t).map(row).join('')}</tbody></table>`).join('');
+    return;
+  }
+  const rows = standings().map((e, i) => `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i+1}</td><td><span class="dot" style="background:${e.isPlayer ? 'var(--sodium)' : e.color}"></span>${escH(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${e.best}</td></tr>`).join('');
   host.innerHTML = `<table><thead><tr><th>#</th><th>FIGHTER</th><th>K</th><th>D</th><th>BEST STREAK</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 const rc = $('radar').getContext('2d');
@@ -1293,7 +1394,7 @@ function drawRadar() {
   c.strokeStyle = '#f0a23b'; c.lineWidth = 14; c.strokeRect(0, 0, W, H);
   for (const e of ents) {
     if (e === player || !e.alive) continue;
-    if (!cheat('radar') && !(los(player, e) && Math.hypot(e.x-player.x, e.y-player.y) < 1400) && e.revealT <= 0) continue;
+    if (enemy(player, e) && !cheat('radar') && !(los(player, e) && Math.hypot(e.x-player.x, e.y-player.y) < 1400) && e.revealT <= 0) continue;
     c.fillStyle = e.color; c.beginPath(); c.arc(e.x, e.y, 34, 0, Math.PI*2); c.fill();
     c.strokeStyle = '#000'; c.lineWidth = 6; c.stroke();
   }
@@ -1331,8 +1432,9 @@ function updHud(dt) {
   }
   if (NET.on) { $('clock').textContent = `${ents.length} ONLINE`; $('clock').classList.remove('hot'); }
   else { const t = Math.max(0, Math.ceil(matchT)); $('clock').textContent = `${t/60|0}:${String(t%60).padStart(2,'0')}`; $('clock').classList.toggle('hot', t <= 30); }
-  $('myK').textContent = player.kills;
-  const top = standings()[0]; $('lead').textContent = top.kills ? `${top.isPlayer ? 'You' : top.name} ${top.kills}` : 'none';
+  const sub = $('hudSub');
+  if (TEAM) { const a = teamScore(0), b = teamScore(1); sub.innerHTML = `<b style="color:${TEAMS[0].color}">${TEAMS[0].name} ${a}</b> &nbsp;–&nbsp; <b style="color:${TEAMS[1].color}">${b} ${TEAMS[1].name}</b> &nbsp;·&nbsp; first to ${teamTarget()} &nbsp;·&nbsp; you're ${TEAMS[player.team].name}`; }
+  else { const top = standings()[0]; sub.innerHTML = `You <b>${player.kills}</b> / ${LIMIT} &nbsp;·&nbsp; Leader <b></b>`; sub.querySelectorAll('b')[1].textContent = top.kills ? `${top.isPlayer ? 'You' : top.name} ${top.kills}` : 'none'; }
   $('death').hidden = player.alive;
   if (!player.alive) $('respT').textContent = Math.max(0, player.respawn).toFixed(1);
   if (!$('board').hidden) renderBoard($('boardT'));
@@ -1435,11 +1537,15 @@ function startMatch() {
   if (NET.on) leaveOnline();
   clearFighters(); buildFloor(); parts.length = 0;
   buildKarambit(finish);
-  player = mk('You', '#ece6da', finish, true);
-  ents = [player, ...BOTS.map(([n, c]) => mk(n, c, FKEYS[Math.random()*FKEYS.length|0], false))];
+  player = mk('You', TEAM ? TEAMS[0].color : '#ece6da', finish, true);
+  ents = [player];
+  if (TEAM) for (let i = 0; i < TEAM*2 - 1; i++) {
+    const t = i < TEAM - 1 ? 0 : 1, b = mk(BOT_NAMES[i % BOT_NAMES.length], teamShade(t, i), FKEYS[Math.random()*FKEYS.length|0], false);
+    b.team = t; ents.push(b);
+  } else ents.push(...BOTS.map(([n, c]) => mk(n, c, FKEYS[Math.random()*FKEYS.length|0], false)));
   for (const e of ents) { if (!e.isPlayer) buildFighter(e); }
   for (const e of ents) spawn(e);
-  matchT = MATCH; shake = hurt = 0; $('feed').innerHTML = '';
+  matchT = TEAM ? 300 : MATCH; shake = hurt = 0; $('feed').innerHTML = '';
   for (const id of ['menu','end','pause','board']) $(id).hidden = true;
   $('hud').hidden = false; $('touch').hidden = !touchMode;
   $('tFire').textContent = mode === 'awp' ? 'FIRE' : 'SLASH'; $('tAlt').textContent = mode === 'awp' ? 'SCOPE' : 'STAB';
@@ -1476,6 +1582,15 @@ function endMatch(why) {
   const s = standings(), w = s[0], rank = s.indexOf(player)+1;
   $('endWhy').textContent = `${mode === 'awp' ? 'AWP' : 'KARAMBIT'} · ${why.toUpperCase()}`;
   $('endTitle').textContent = w.isPlayer ? 'You take the bay' : `${w.name} takes the bay`;
+  if (TEAM) {
+    const a = teamScore(0), b = teamScore(1), mine = player.team;
+    $('endTitle').textContent = a === b ? 'Draw' : `${TEAMS[a > b ? 0 : 1].name} win`;
+    $('endLine').textContent = `${TEAMS[0].name} ${a}, ${TEAMS[1].name} ${b}. ${a === b ? 'Nobody' : (a > b) === (mine === 0) ? 'Your team' : 'The other team'} took it. You had ${player.kills} kills and ${player.deaths} deaths.`;
+    renderBoard($('endT'));
+    for (const id of ['touch','board','death','scope','lockHint']) $(id).hidden = true;
+    $('end').hidden = false;
+    return;
+  }
   $('endLine').textContent = `You finished ${rank}${['st','nd','rd'][rank-1] || 'th'} of ${s.length} with ${player.kills} kills, ${player.deaths} deaths and a best streak of ${player.best}.`;
   renderBoard($('endT'));
   for (const id of ['touch','board','death','scope','lockHint']) $(id).hidden = true;
@@ -1511,22 +1626,38 @@ function syncPickers() {
 syncPickers();
 let savedCustom = null;
 try { const c = localStorage.getItem('hr-custom-map'); if (c) { parseMapCode(c); savedCustom = c; } } catch (e) {}
-let mapChoice = store.get('hr-map', 'bay4') === 'custom' && savedCustom ? 'custom' : 'bay4';
+let mapChoice = store.get('hr-map', 'bay4');
+if (mapChoice === 'custom' && !savedCustom) mapChoice = 'bay4';
+if (mapChoice.startsWith('b:') && !BUILTIN_MAPS.some(m => 'b:' + m.id === mapChoice)) mapChoice = 'bay4';
+function customName() { try { return savedCustom ? JSON.parse(savedCustom).name || 'Custom map' : ''; } catch (e) { return 'Custom map'; } }
 function syncMapUi() {
-  for (const b of $('mapPick').children) b.setAttribute('aria-pressed', b.dataset.map === mapChoice);
-  $('map-custom').disabled = !savedCustom;
-  let name = ''; try { name = savedCustom ? JSON.parse(savedCustom).name || 'Custom map' : ''; } catch (e) {}
-  $('mapStatus').textContent = mapChoice === 'custom' ? `Playing ${name}. ${NET.canShareMaps ? 'Online, everyone who joins your room downloads it.' : 'Custom maps are for bot matches here; online uses Bay 4.'}`
-    : savedCustom ? `Your custom map: ${name}.` : 'Make maps in Bay Forge, then load their map code here.';
+  const sel = $('mapSelect');
+  sel.innerHTML = `<option value="bay4">Bay 4 · warehouse</option>` + BUILTIN_MAPS.map(m => `<option value="b:${m.id}">${m.name}</option>`).join('')
+    + (savedCustom ? `<option value="custom"></option>` : '');
+  if (savedCustom) sel.querySelector('option[value="custom"]').textContent = `Custom: ${customName()}`;
+  sel.value = mapChoice;
+  const b = BUILTIN_MAPS.find(m => 'b:' + m.id === mapChoice);
+  $('mapStatus').textContent = mapChoice === 'custom' ? `${NET.canShareMaps ? 'Online, everyone who joins your room downloads it.' : 'Custom maps are for bot matches here; online uses Bay 4.'}`
+    : b ? b.about : 'The original warehouse. Make your own maps in Bay Forge and load their map code here.';
 }
 function applyMapChoice() {
   // online, the room decides the map: the host's choice, downloaded by everyone else
   const f = NET.forceMap;
   if (f) { if (f === 'bay4') { if (currentMap.id !== 'bay4') setBay4(); } else if (currentMap.code !== f) setCustomMap(parseMapCode(f), f); return; }
-  if (mapChoice === 'custom' && savedCustom) { if (currentMap.code !== savedCustom) setCustomMap(parseMapCode(savedCustom), savedCustom); }
+  const b = BUILTIN_MAPS.find(m => 'b:' + m.id === mapChoice);
+  if (b) { const code = JSON.stringify(b.map); if (currentMap.code !== code) setCustomMap(JSON.parse(code), code); }
+  else if (mapChoice === 'custom' && savedCustom) { if (currentMap.code !== savedCustom) setCustomMap(parseMapCode(savedCustom), savedCustom); }
   else if (currentMap.id !== 'bay4') setBay4();
 }
-for (const b of $('mapPick').children) b.addEventListener('click', () => { if (b.disabled) return; mapChoice = b.dataset.map; store.set('hr-map', mapChoice); syncMapUi(); });
+$('mapSelect').addEventListener('change', e => { mapChoice = e.target.value; store.set('hr-map', mapChoice); syncMapUi(); });
+TEAM = clamp(parseInt(store.get('hr-team', '0')) || 0, 0, 8);
+function syncTeamUi() {
+  for (const b of $('teamPick').children) b.setAttribute('aria-pressed', +b.dataset.t === TEAM);
+  $('teamStatus').textContent = TEAM ? `${TEAMS[0].name} vs ${TEAMS[1].name}, ${TEAM} a side. Against bots, bots fill both teams. No friendly fire. First team to ${teamTarget()} kills, or the most kills after 5:00.`
+    : 'Everyone for themselves. First to 15 kills, or the most kills after 3:00.';
+}
+for (const b of $('teamPick').children) b.addEventListener('click', () => { TEAM = +b.dataset.t; store.set('hr-team', String(TEAM)); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
+syncTeamUi();
 $('mapLoadBtn').addEventListener('click', () => { $('mapModal').hidden = false; $('mapCodeMsg').textContent = ''; $('mapCode').focus(); });
 $('mapCodeClose').addEventListener('click', () => { $('mapModal').hidden = true; });
 $('mapCodeLoad').addEventListener('click', () => {
@@ -1587,12 +1718,13 @@ function applyCheatVisuals() {
   for (const m of [MAT.dark, MAT.mask]) m.needsUpdate = true;
   $('cheatTag').hidden = !anyCheat() || state !== 'play';
 }
-$('ch-killall').addEventListener('click', () => { if (NET.on) return; for (const e of ents) if (!e.isPlayer && e.alive) { e.prot = 0; damage(player, e, 999, { weapon:player.weapon }); } });
+$('ch-killall').addEventListener('click', () => { if (NET.on) return; for (const e of ents) if (!e.isPlayer && e.alive && enemy(player, e)) { e.prot = 0; damage(player, e, 999, { weapon:player.weapon }); } });
 $('ch-addbot').addEventListener('click', () => {
   if (NET.on || !player || ents.length >= 16) return;
   const names = ['Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'], cols = ['#b07d5a','#5a8fb0','#9fb05a','#b05a8f','#5ab0a0','#a05ab0','#b0a55a','#6a6fb0','#b06a6a'];
   const n = ents.length - 8;
   const e = mk(names[(n + names.length) % names.length] + (n >= names.length ? ' ' + (n + 1) : ''), cols[(n + cols.length) % cols.length], FKEYS[Math.random()*FKEYS.length|0], false);
+  if (TEAM) { e.team = ents.filter(x => x.team === 0).length > ents.filter(x => x.team === 1).length ? 1 : 0; e.color = teamShade(e.team, ents.length); }
   ents.push(e); buildFighter(e); spawn(e); applyCheatVisuals();
 });
 $('ch-kills').addEventListener('click', () => { if (NET.on || !player) return; player.kills += 5; player.streak += 5; player.best = Math.max(player.best, player.streak); if (player.kills >= LIMIT) { resume(); endMatch(`You reached ${LIMIT} kills`); } });
@@ -1602,7 +1734,7 @@ $('ch-off').addEventListener('click', () => { for (const [k] of CHEATS) CHEAT[k]
 function aimAssist(dt) {
   const p = player; let best = null, bd = 1e9;
   for (const e of ents) {
-    if (e.isPlayer || !e.alive || !los(p, e)) continue;
+    if (e.isPlayer || !e.alive || !enemy(p, e) || !los(p, e)) continue;
     const da = Math.abs(angDiff(Math.atan2(e.y - p.y, e.x - p.x), p.ang)); if (da > .9) continue;
     const d = Math.hypot(e.x - p.x, e.y - p.y) + da*300; if (d < bd) { bd = d; best = e; }
   }
@@ -1636,7 +1768,7 @@ $('nick').addEventListener('change', () => { NET.nick = cleanText($('nick').valu
 $('roomCode').addEventListener('change', () => { NET.code = cleanCode($('roomCode').value); $('roomCode').value = NET.code; store.set('hr-room', NET.code); updateNetStatus(); });
 $('startOnline').addEventListener('click', () => { $('nick').dispatchEvent(new Event('change')); $('roomCode').dispatchEvent(new Event('change')); sfx('dash'); startOnline(); });
 
-function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode && (pr.cx ? 1 : 0) === (NET.cheatsRoom ? 1 : 0) && (pr.mp || 'bay4') === currentMap.id; }
+function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode && (pr.ty | 0) === TEAM && (pr.cx ? 1 : 0) === (NET.cheatsRoom ? 1 : 0) && (pr.mp || 'bay4') === currentMap.id; }
 function updateNetStatus() {
   const el = $('netStatus'), btn = $('startOnline');
   if (!window.Peer) { el.textContent = 'Online play could not load. Check your connection and reload the page.'; btn.disabled = true; return; }
@@ -1779,7 +1911,7 @@ async function startOnline() {
   if (!window.Peer || NET.connecting) return;
   NET.connecting = true; NET.netError = ''; updateNetStatus();
   try {
-    const room = await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    const room = await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
     NET.room = room;
     NET.onMigrate = id => { NET.myPeer = id; };
     room.onPeers(ch => { for (const p of ch.peers) if (p.sameTab) NET.myPeer = p.peer; if (NET.on) readPeers(ch); });
@@ -1814,6 +1946,11 @@ function beginOnlineMatch() {
   NET.on = true; NET.hits = []; NET.died = null; NET.shot = null; NET.round = 0; NET.roundEnd = 0; NET.seen.clear();
   player.name = 'You'; player.color = NET.color;
   clearFighters(); ents = [player];
+  if (TEAM) {
+    // join the team with fewer players
+    const cnt = [0, 0]; for (const q of NET.room.peers()) if (!q.sameTab && inMatch(q.presence)) cnt[q.presence.tm === 1 ? 1 : 0]++;
+    player.team = cnt[0] <= cnt[1] ? 0 : 1; player.color = TEAMS[player.team].color;
+  }
   for (const p of NET.room.peers()) if (!p.sameTab && inMatch(p.presence)) NET.round = Math.max(NET.round, p.presence.r | 0);
   readPeers({ peers:NET.room.peers(), left:[] });
   spawn(player);
@@ -1844,7 +1981,7 @@ function readPeers(ch) {
     if (!e) {
       const col = /^#[0-9a-f]{6}$/i.test(pr.c) ? pr.c : '#9aa4ad';
       e = mk(cleanText(pr.n, 14) || 'Player', col, FINISHES[pr.f] ? pr.f : 'fade', false);
-      Object.assign(e, { remote:true, peer:p.peer, snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
+      Object.assign(e, { remote:true, peer:p.peer, team:pr.tm === 1 ? 1 : 0, snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
       // ignore anything this player did before we arrived
       NET.seen.set(p.peer, { hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
       buildFighter(e); ents.push(e); applyCheatVisuals();
@@ -1859,7 +1996,7 @@ function readPeers(ch) {
     e.hp = clamp(num(pr.hp, 100), 0, 100); e.zoom = num(pr.z) | 0;
     e.kills = (pr.r | 0) === NET.round ? clamp(num(pr.k) | 0, 0, 999) : 0;
     e.deaths = (pr.r | 0) === NET.round ? clamp(num(pr.d) | 0, 0, 999) : 0;
-    e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0; e.crouchAmt = clamp(num(pr.cr), 0, 1);
+    e.team = pr.tm === 1 ? 1 : 0; e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0; e.crouchAmt = clamp(num(pr.cr), 0, 1);
     if ((pr.r | 0) > NET.round) newRound(pr.r | 0);
     const w = pr.w === 'awp' ? 'awp' : 'knife';
     if (w !== e.weapon) { e.weapon = w; dropRemote(e); e.gone = false; buildFighter(e); applyCheatVisuals(); }
@@ -1881,7 +2018,7 @@ function readPeers(ch) {
     if (Array.isArray(pr.hits)) for (const h of pr.hits.slice(-8)) {
       const q = +h.q || 0; if (q <= seen.hit) continue;
       seen.hit = q;
-      if (h.t !== NET.myPeer || !player.alive) continue;
+      if (h.t !== NET.myPeer || !player.alive || !enemy(e, player)) continue;
       const dmg = clamp(num(h.dm), 0, 999), wpn = h.w === 'awp' ? 'awp' : 'knife';
       damage(e, player, dmg, { weapon:wpn, hs:!!h.hs, noscope:!!h.ns, behind:!!h.bk });
     }
@@ -1938,7 +2075,9 @@ function netFrame() {
   const p = player, now = performance.now();
   // someone reached the limit: show the board, then everyone starts the next round together
   if (!NET.roundEnd) {
-    const w = ents.find(e => e.kills >= LIMIT);
+    const wt = TEAM ? [0, 1].find(t => teamScore(t) >= teamTarget()) : undefined;
+    if (wt !== undefined) { NET.roundEnd = now + 8000; callout(`${TEAMS[wt].name.toUpperCase()} WIN`, `${wt === player.team ? 'YOUR TEAM' : 'THE OTHER TEAM'} · NEXT ROUND IN 8 S`); $('board').hidden = false; renderBoard($('boardT')); }
+    const w = TEAM ? null : ents.find(e => e.kills >= LIMIT);
     if (w) { NET.roundEnd = now + 8000; callout(w.isPlayer ? 'YOU WIN' : `${w.name.toUpperCase()} WINS`, `ROUND ${NET.round + 1} · NEXT ROUND IN 8 S`); $('board').hidden = false; renderBoard($('boardT')); }
   } else if (now > NET.roundEnd) newRound(NET.round + 1);
   // my swing, so others can animate it
@@ -1947,7 +2086,7 @@ function netFrame() {
   NET.lastSent = now;
   const r2 = v => Math.round(v*100)/100;
   NET.room.presence({
-    hr:1, rm:NET.code, md:mode, mp:currentMap.id, mn:currentMap.name, cx:NET.cheatsRoom ? 1 : 0, cr:Math.round((p.crouchAmt || 0)*10)/10, st:'play', n:NET.nick, c:NET.color, f:finish, w:p.weapon,
+    hr:1, rm:NET.code, md:mode, ty:TEAM, tm:p.team, mp:currentMap.id, mn:currentMap.name, cx:NET.cheatsRoom ? 1 : 0, cr:Math.round((p.crouchAmt || 0)*10)/10, st:'play', n:NET.nick, c:TEAM ? TEAMS[p.team].color : NET.color, f:finish, w:p.weapon,
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
