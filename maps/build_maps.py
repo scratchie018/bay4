@@ -16,6 +16,17 @@ BUILTINS = [
     ('tile', 'Floor tile', 'tile', 1, .5, 0), ('grass', 'Grass', 'grass', 2, 1, 0), ('plain', 'Plain (tint me)', 'plain', 1, .8, 0),
 ]
 MATERIALS = [dict(id=i, name=n, type='builtin', gen=g, tile=t, rough=r, metal=m) for i, n, g, t, r, m in BUILTINS]
+# shared texture library (maps/textures.json, CC0 Screaming Brain Studios): name -> (label, metres per repeat, roughness, metalness)
+TEX = {
+    'sand': ('Sand', 3, 1, 0), 'rock': ('Mossy rock', 3, .95, 0), 'planks': ('Planks', 1.6, .85, 0), 'plate': ('Steel plate', 1.5, .5, .55),
+    'ribbed': ('Ribbed metal', 2, .55, .5), 'pavers': ('Pavers', 2, .85, 0), 'plaster': ('Plaster', 3, .95, 0), 'redbrick': ('Red brick', 2, .9, 0),
+    'cobble': ('Cobblestone', 2, .9, 0), 'lightwood': ('Light wood', 1.6, .8, 0), 'lava': ('Lava', 2, .6, 0), 'snow': ('Snow', 3, 1, 0),
+    'ice': ('Ice', 3, .3, 0), 'logs': ('Dark wood', 1.6, .85, 0), 'labtile': ('Lab tile', 1.5, .45, 0), 'labwall': ('Lab wall', 3, .9, 0),
+    'darkcobble': ('Dark cobble', 1.5, .85, 0), 'darkstone': ('Dark stone', 3, .9, 0), 'yard': ('Yard concrete', 4, .9, .1),
+}
+def tex_mat(ref):
+    name = ref[4:]; label, tile, rough, metal = TEX[name]
+    return dict(id='t-' + name, name=label, type='image', src='tex:' + name, tile=tile, rough=rough, metal=metal)
 
 
 def merge_solid(grid):
@@ -62,7 +73,7 @@ def build(spec):
                  size=[w*CELL, wall_h, h*CELL], rotY=0, mat=wm, tint=wt))
     for i, c in enumerate(spec.get('cover', [])):
         kind, x, y, w, h = c[:5]
-        tall = {'c': 1.2, 'C': 2.4, 'P': 3.6}[kind]
+        tall = {'c': 1.2, 'C': 2.4, 'P': 3.6, 'R': 4.5, 'L': .6}[kind]
         mat = c[5] if len(c) > 5 else spec.get('cover_mat', 'crate')
         tint = c[6] if len(c) > 6 else spec.get('cover_tint', '#ffffff')
         add(dict(name=f'Cover {i+1}', kind='solid', shape='box', pos=[(x + w/2)*CELL, 0, (y + h/2)*CELL],
@@ -99,6 +110,13 @@ def build(spec):
     env = dict(floorMat=spec.get('floor_mat', 'concrete'), wallMat=wm, ceilMat='concrete-dark', ambient=spec.get('ambient', 1.0),
                sky=spec.get('sky', '#a9c8e8'), fog=spec.get('fog', 150), roof=spec.get('roof', 'none'))
     mats = json.loads(json.dumps(MATERIALS))
+    used = {o.get('mat') for o in objs if o.get('mat')} | {env['floorMat'], env['wallMat']}
+    for ref in sorted(u for u in used if isinstance(u, str) and u.startswith('tex:')):
+        mats.append(tex_mat(ref))
+    for o in objs:
+        if isinstance(o.get('mat'), str) and o['mat'].startswith('tex:'): o['mat'] = 't-' + o['mat'][4:]
+    for k in ('floorMat', 'wallMat'):
+        if env[k].startswith('tex:'): env[k] = 't-' + env[k][4:]
     # tinted floor: a dedicated material so the floor colour doesn't depend on object tints
     if spec.get('floor_tint'):
         base = next(m for m in mats if m['id'] == spec.get('floor_mat', 'concrete'))
@@ -115,55 +133,57 @@ def build(spec):
 # ---------------- maps ----------------
 # coordinates are (x0, y0, x1, y1) in cells, inclusive. Team A spawns at the bottom, team B at the top.
 MAPS = [
-    dict(id='dunes', name='Dunes', about='Desert town: a long corridor to one site, tunnels to the other, a central lane between. Layout inspired by Dust II.',
-         size=(40, 34), wall_mat='plain', wall_tint='#dcc296', floor_mat='plain', floor_tint='#cdb48a', cover_mat='wood',
-         ambient=1.15, sky='#b9d3ec', fog=170,
-         open=[(16, 1, 23, 4), (2, 2, 10, 9), (29, 2, 37, 9), (10, 3, 16, 4), (23, 3, 29, 4), (18, 4, 21, 8),
-               (11, 7, 17, 8), (18, 8, 21, 22), (22, 14, 27, 15), (26, 9, 27, 14), (33, 10, 36, 26), (33, 26, 36, 29),
-               (14, 27, 26, 31), (26, 28, 33, 29), (17, 22, 20, 27), (8, 28, 14, 29), (4, 12, 7, 29), (4, 9, 7, 12),
-               (8, 17, 17, 18)],
-         cover=[('C', 4, 4, 2, 2), ('c', 8, 7, 1, 1), ('C', 9, 2, 1, 1), ('C', 32, 4, 2, 2), ('c', 30, 7, 1, 1),
-                ('c', 36, 3, 1, 1), ('C', 18, 12, 1, 1), ('C', 21, 12, 1, 1), ('c', 19, 18, 1, 1), ('c', 34, 15, 1, 1),
-                ('C', 33, 20, 1, 1), ('C', 36, 20, 1, 1), ('c', 16, 29, 1, 1), ('c', 24, 28, 1, 1), ('c', 5, 20, 1, 1),
-                ('c', 34, 28, 1, 1)],
-         spawn_a=[(15, 29), (17, 30), (19, 28), (20, 30), (22, 29), (24, 30), (25, 28), (18, 29)],
-         spawn_b=[(16, 2), (17, 3), (18, 1), (19, 3), (20, 2), (21, 1), (22, 3), (23, 2)]),
-    dict(id='plaza', name='Plaza', about='Market town: a palace and ramp to one site, apartments to the other, a window room over the middle. Layout inspired by Mirage.',
-         size=(40, 34), wall_mat='plain', wall_tint='#e9dcc0', floor_mat='tile', floor_tint='#d6c7a6', cover_mat='wood',
-         ambient=1.1, sky='#c6dcef', fog=170,
-         open=[(15, 28, 25, 31), (25, 24, 28, 30), (28, 27, 37, 29), (34, 18, 37, 26), (28, 13, 30, 23), (31, 13, 34, 17),
-               (27, 3, 37, 12), (12, 1, 24, 4), (24, 2, 27, 6), (18, 13, 21, 27), (14, 9, 20, 12), (21, 9, 27, 11),
-               (14, 4, 16, 9), (8, 16, 17, 18), (6, 28, 15, 30), (6, 19, 8, 28), (2, 4, 11, 13), (5, 13, 8, 19), (8, 2, 12, 4)],
-         cover=[('C', 31, 6, 2, 2), ('c', 35, 10, 1, 1), ('c', 28, 4, 1, 1), ('C', 5, 7, 2, 2), ('c', 9, 11, 1, 1),
-                ('c', 3, 5, 1, 1), ('C', 17, 10, 1, 1), ('c', 19, 22, 1, 1), ('c', 29, 18, 1, 1), ('C', 35, 22, 1, 1),
-                ('c', 7, 23, 1, 1), ('c', 12, 17, 1, 1), ('c', 17, 29, 1, 1), ('c', 23, 30, 1, 1)],
-         spawn_a=[(16, 29), (17, 31), (19, 29), (20, 31), (22, 29), (23, 31), (24, 29), (18, 30)],
-         spawn_b=[(13, 2), (15, 3), (17, 2), (18, 4), (20, 2), (21, 3), (23, 2), (14, 4)]),
-    dict(id='villa', name='Villa', about='Old village: a winding lane to one site, apartments and an arch to the other. Layout inspired by Inferno.',
-         size=(40, 34), wall_mat='brick', wall_tint='#d9a98a', floor_mat='plain', floor_tint='#b9a58e', cover_mat='wood',
-         ambient=1.05, sky='#c7d7e6', fog=160,
-         open=[(2, 27, 12, 31), (3, 10, 6, 26), (3, 8, 7, 10), (2, 1, 13, 8), (14, 1, 22, 4), (12, 2, 14, 4), (22, 2, 28, 4),
-               (28, 2, 37, 11), (12, 22, 16, 30), (12, 15, 18, 22), (18, 15, 28, 17), (26, 11, 29, 15), (16, 24, 31, 26),
-               (30, 12, 33, 24), (34, 12, 37, 16), (19, 4, 21, 15)],
-         cover=[('C', 5, 3, 2, 1), ('c', 10, 5, 1, 1), ('c', 4, 15, 1, 1), ('C', 5, 21, 1, 1), ('C', 31, 5, 2, 2),
-                ('c', 35, 9, 1, 1), ('c', 29, 3, 1, 1), ('c', 15, 18, 1, 1), ('c', 24, 25, 1, 1), ('C', 31, 18, 1, 1),
-                ('c', 6, 29, 1, 1), ('c', 10, 28, 1, 1), ('C', 20, 9, 1, 1), ('c', 35, 14, 1, 1)],
-         spawn_a=[(3, 29), (4, 31), (5, 28), (7, 30), (8, 28), (9, 31), (11, 29), (6, 31)],
-         spawn_b=[(15, 2), (16, 3), (17, 1), (18, 3), (19, 2), (20, 3), (21, 1), (16, 1)]),
+    dict(id='quarry', name='Quarry', about='Open stone quarry. Giant boulders split it into three lanes around a central rock.',
+         size=(36, 30), wall_mat='tex:rock', floor_mat='tex:sand', cover_mat='tex:planks', ambient=1.1, sky='#bcd2e6', fog=170, wall_h=6,
+         open=[(1, 1, 34, 28)],
+         cover=[('R', 6, 4, 4, 6, 'tex:rock'), ('R', 6, 20, 4, 6, 'tex:rock'), ('R', 14, 1, 3, 7, 'tex:rock'), ('R', 14, 22, 3, 7, 'tex:rock'),
+                ('R', 16, 12, 4, 6, 'tex:rock'), ('R', 25, 4, 4, 6, 'tex:rock'), ('R', 25, 20, 4, 6, 'tex:rock'), ('R', 11, 13, 2, 4, 'tex:rock'),
+                ('R', 23, 13, 2, 4, 'tex:rock'), ('C', 4, 13, 1, 1), ('C', 31, 15, 1, 1), ('c', 12, 9, 1, 1), ('c', 23, 20, 1, 1),
+                ('c', 20, 9, 1, 1), ('c', 15, 19, 1, 1), ('C', 19, 25, 2, 1, 'tex:plate'), ('C', 15, 3, 2, 1, 'tex:plate')],
+         spawn_a=[(2, 3), (2, 7), (2, 11), (2, 15), (2, 19), (2, 23), (2, 26), (4, 9)],
+         spawn_b=[(33, 3), (33, 7), (33, 11), (33, 15), (33, 19), (33, 23), (33, 26), (31, 21)]),
+    dict(id='market', name='Market', about='Town square with a fountain and market stalls, streets on four sides and alleys around the edge.',
+         size=(34, 34), wall_mat='tex:plaster', floor_mat='tex:pavers', cover_mat='tex:lightwood', ambient=1.05, sky='#c4d8ea', fog=160,
+         open=[(10, 10, 23, 23), (15, 1, 18, 10), (15, 23, 18, 32), (1, 15, 10, 18), (23, 15, 32, 18),
+               (3, 3, 30, 5), (3, 28, 30, 30), (3, 3, 5, 30), (28, 3, 30, 30), (10, 6, 12, 10), (21, 23, 23, 27)],
+         cover=[('P', 16, 16, 2, 2, 'tex:cobble'), ('c', 12, 12, 2, 1), ('c', 20, 12, 2, 1), ('c', 12, 21, 2, 1), ('c', 20, 21, 2, 1),
+                ('C', 11, 16, 1, 2, 'tex:redbrick'), ('C', 22, 16, 1, 2, 'tex:redbrick'), ('c', 16, 4, 1, 1), ('c', 17, 29, 1, 1),
+                ('c', 4, 10, 1, 1), ('c', 29, 23, 1, 1), ('C', 8, 4, 1, 1), ('C', 25, 29, 1, 1), ('c', 7, 16, 1, 1), ('c', 26, 17, 1, 1)],
+         spawn_a=[(4, 6), (4, 10), (4, 14), (4, 19), (4, 23), (4, 27), (7, 29), (7, 4)],
+         spawn_b=[(29, 6), (29, 10), (29, 14), (29, 19), (29, 23), (29, 27), (26, 29), (26, 4)]),
+    dict(id='foundry', name='Foundry', about='Steel works under orange lamps. Lava channels split the floor; cross on the central bridge or go around.',
+         size=(30, 26), wall_mat='tex:ribbed', floor_mat='tex:plate', cover_mat='tex:ribbed', ambient=.5, sky='#120d0a', fog=70, roof='solid',
+         wall_h=6, lamp_y=5, lamp_color='#ffb070',
+         lamps=[(5, 4), (14, 4), (24, 4), (5, 12), (24, 12), (14, 12), (5, 21), (14, 21), (24, 21), (10, 8), (19, 17), (19, 8)],
+         open=[(1, 1, 28, 24)],
+         cover=[('L', 2, 12, 11, 2, 'tex:lava'), ('L', 17, 12, 11, 2, 'tex:lava'), ('P', 9, 1, 1, 6), ('P', 9, 19, 1, 6),
+                ('P', 20, 1, 1, 6), ('P', 20, 19, 1, 6), ('C', 13, 5, 3, 2, 'tex:plate'), ('C', 13, 19, 3, 2, 'tex:plate'),
+                ('C', 4, 7, 2, 2), ('C', 24, 16, 2, 2), ('c', 5, 17, 1, 1), ('c', 24, 8, 1, 1), ('P', 14, 9, 1, 1), ('P', 14, 16, 1, 1)],
+         spawn_a=[(2, 2), (5, 2), (2, 5), (7, 3), (2, 9), (11, 3), (16, 2), (25, 2)],
+         spawn_b=[(27, 23), (24, 23), (27, 20), (22, 22), (27, 16), (18, 23), (13, 23), (4, 23)]),
+    dict(id='frost', name='Frost', about='Snowed-in outpost: log cabins, ice ridges and fences across a frozen yard.',
+         size=(34, 28), wall_mat='tex:ice', floor_mat='tex:snow', cover_mat='tex:logs', ambient=1.2, sky='#d7e4ef', fog=110, wall_h=5,
+         open=[(1, 1, 32, 26)],
+         cover=[('P', 5, 5, 4, 3, 'tex:logs'), ('P', 25, 5, 4, 3, 'tex:logs'), ('P', 5, 20, 4, 3, 'tex:logs'), ('P', 25, 20, 4, 3, 'tex:logs'),
+                ('P', 15, 11, 4, 5, 'tex:logs'), ('R', 11, 3, 1, 6, 'tex:ice'), ('R', 22, 19, 1, 6, 'tex:ice'), ('R', 11, 19, 1, 4, 'tex:ice'),
+                ('R', 22, 5, 1, 4, 'tex:ice'), ('c', 1, 13, 6, 1, 'tex:planks'), ('c', 27, 14, 6, 1, 'tex:planks'), ('c', 16, 4, 2, 1),
+                ('c', 16, 22, 2, 1), ('C', 8, 13, 1, 1), ('C', 25, 13, 1, 1)],
+         spawn_a=[(3, 25), (7, 25), (11, 25), (15, 25), (19, 25), (23, 25), (27, 25), (31, 25)],
+         spawn_b=[(3, 2), (7, 2), (11, 2), (15, 2), (19, 2), (23, 2), (27, 2), (31, 2)]),
     dict(id='shipyard', name='Shipyard', about='Container yard at the docks. Lots of cover, lanes between stacks.',
-         size=(32, 24), wall_mat='steel-wall', floor_mat='concrete', cover_mat='crate', ambient=.95, sky='#93a7bb', fog=120,
+         size=(32, 24), wall_mat='tex:ribbed', floor_mat='tex:yard', cover_mat='tex:ribbed', ambient=.95, sky='#93a7bb', fog=120,
          open=[(1, 1, 30, 22)],
-         cover=[('P', 5, 4, 3, 1, 'crate', '#c0563f'), ('P', 5, 9, 1, 3, 'crate', '#3f7fc0'), ('C', 9, 6, 2, 1, 'crate', '#4f9a5c'),
-                ('P', 12, 3, 1, 3, 'crate', '#c9a33b'), ('C', 14, 9, 3, 1, 'crate', '#c0563f'), ('c', 15, 6, 1, 1),
-                ('P', 19, 3, 1, 3, 'crate', '#3f7fc0'), ('C', 21, 6, 2, 1, 'crate', '#4f9a5c'), ('P', 24, 4, 3, 1, 'crate', '#c9a33b'),
-                ('P', 26, 9, 1, 3, 'crate', '#c0563f'), ('P', 5, 14, 3, 1, 'crate', '#4f9a5c'), ('C', 9, 16, 2, 1, 'crate', '#3f7fc0'),
-                ('P', 12, 17, 1, 3, 'crate', '#c0563f'), ('C', 15, 13, 3, 1, 'crate', '#c9a33b'), ('c', 16, 16, 1, 1),
-                ('P', 19, 17, 1, 3, 'crate', '#4f9a5c'), ('C', 21, 16, 2, 1, 'crate', '#c0563f'), ('P', 24, 19, 3, 1, 'crate', '#3f7fc0'),
+         cover=[('P', 5, 4, 3, 1, 'tex:ribbed', '#c0563f'), ('P', 5, 9, 1, 3, 'tex:ribbed', '#3f7fc0'), ('C', 9, 6, 2, 1, 'tex:ribbed', '#4f9a5c'),
+                ('P', 12, 3, 1, 3, 'tex:ribbed', '#c9a33b'), ('C', 14, 9, 3, 1, 'tex:ribbed', '#c0563f'), ('c', 15, 6, 1, 1),
+                ('P', 19, 3, 1, 3, 'tex:ribbed', '#3f7fc0'), ('C', 21, 6, 2, 1, 'tex:ribbed', '#4f9a5c'), ('P', 24, 4, 3, 1, 'tex:ribbed', '#c9a33b'),
+                ('P', 26, 9, 1, 3, 'tex:ribbed', '#c0563f'), ('P', 5, 14, 3, 1, 'tex:ribbed', '#4f9a5c'), ('C', 9, 16, 2, 1, 'tex:ribbed', '#3f7fc0'),
+                ('P', 12, 17, 1, 3, 'tex:ribbed', '#c0563f'), ('C', 15, 13, 3, 1, 'tex:ribbed', '#c9a33b'), ('c', 16, 16, 1, 1),
+                ('P', 19, 17, 1, 3, 'tex:ribbed', '#4f9a5c'), ('C', 21, 16, 2, 1, 'tex:ribbed', '#c0563f'), ('P', 24, 19, 3, 1, 'tex:ribbed', '#3f7fc0'),
                 ('c', 29, 12, 1, 1), ('c', 2, 11, 1, 1)],
          spawn_a=[(2, 3), (2, 6), (2, 9), (2, 14), (2, 17), (2, 20), (3, 12), (3, 7)],
          spawn_b=[(29, 3), (29, 6), (29, 9), (29, 14), (29, 17), (29, 20), (28, 11), (28, 16)]),
     dict(id='arena', name='Arena', about='Small mirrored arena for 1v1 and 2v2. Pillars and low walls, nowhere to hide for long.',
-         size=(18, 18), wall_mat='concrete-dark', floor_mat='diamond', cover_mat='hazard', ambient=.7, sky='#1a1d22', fog=80,
+         size=(18, 18), wall_mat='tex:darkstone', floor_mat='tex:darkcobble', cover_mat='hazard', ambient=.7, sky='#1a1d22', fog=80,
          roof='solid', lamp_y=5.2, lamps=[(4, 4), (13, 4), (4, 13), (13, 13), (8, 8)],
          open=[(1, 1, 16, 16)],
          cover=[('P', 5, 5, 1, 1), ('P', 12, 5, 1, 1), ('P', 5, 12, 1, 1), ('P', 12, 12, 1, 1), ('c', 8, 3, 2, 1),
@@ -171,7 +191,7 @@ MAPS = [
          spawn_a=[(2, 15), (4, 15), (2, 13), (6, 15), (2, 11), (8, 15), (10, 15), (2, 9)],
          spawn_b=[(15, 2), (13, 2), (15, 4), (11, 2), (15, 6), (9, 2), (7, 2), (15, 8)]),
     dict(id='lab', name='Lab', about='Indoor research lab: offices, a server hall and long corridors under strip lights.',
-         size=(30, 24), wall_mat='plain', wall_tint='#cfd6dc', floor_mat='tile', floor_tint='#aeb7bf', cover_mat='plain', cover_tint='#6f7b86',
+         size=(30, 24), wall_mat='tex:labwall', floor_mat='tex:labtile', cover_mat='plain', cover_tint='#6f7b86',
          ambient=.45, sky='#0c0e11', fog=70, roof='solid', lamp_y=3.7, lamp_color='#e8f2ff', wall_h=4,
          lamps=[(4, 4), (14, 3), (25, 4), (4, 12), (14, 12), (25, 12), (4, 20), (14, 20), (25, 20), (9, 8), (20, 16)],
          open=[(1, 1, 8, 7), (11, 1, 18, 5), (21, 1, 28, 7), (1, 10, 28, 13), (1, 16, 8, 22), (11, 18, 18, 22),
