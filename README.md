@@ -9,6 +9,6 @@ A first-person free-for-all in a sodium-lit warehouse bay. Karambits only, or AW
 
 Cheats: press ` (or Esc) in a bot match for god mode, aim assist, wallhack, moon jump and more. Online, cheats only work in cheats rooms: turn on "Cheats room" next to the room code. Cheats rooms and normal rooms never mix.
 
-Controls: WASD move · mouse aim · left click slash / fire · right click stab / scope · Shift dash · Space jump · 1 / 3 / Q swap weapons · R reload · F inspect · Tab scores · Esc pause.
+Controls: WASD move · mouse aim · left click slash / fire · right click stab / scope · Shift dash · Space jump · C crouch · 1 / 3 / Q swap weapons · R reload · F inspect · Tab scores · Esc pause.
 
 Online play connects players directly with WebRTC ([PeerJS](https://peerjs.com/)). Some school and work networks block that.

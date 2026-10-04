@@ -22,7 +22,8 @@ html{box-sizing:border-box;height:100%;background:var(--ground)}
 body{height:100%;background:var(--ground);color:var(--bone);font-family:var(--body);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
 #game{position:relative;height:100%;overflow:hidden}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-#game.playing #cv{cursor:none}
+#game.playing.locked #cv{cursor:none}
+#aimPrompt{left:50%;top:60%;transform:translate(-50%,-50%);font-size:14px;font-weight:700;letter-spacing:.12em;color:#141619;background:var(--sodium);padding:8px 16px;pointer-events:none;text-shadow:none}
 
 .hud{position:absolute;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 .lbl{font-size:11px;letter-spacing:.14em;color:var(--steel);font-weight:600}
@@ -219,6 +220,7 @@ tr.me td{color:var(--sodium);font-weight:700}
   <div class="hud" id="callout"></div>
   <div class="hud" id="death" hidden><div class="k" id="deathMsg">Killed by Vex</div><div class="t" id="respT">2.4</div></div>
   <div class="hud" id="cheatTag" hidden>CHEATS ON</div>
+  <div class="hud" id="aimPrompt" hidden>CLICK TO AIM</div>
   <div class="hud" id="lockHint" hidden>Mouse lock is blocked here. Move the mouse inside the window to look.</div>
 
   <div id="touch" hidden>
@@ -265,6 +267,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div>Dash (knife) <kbd>Shift</kbd></div>
         <div>AWP / Knife <span><kbd>1</kbd><kbd>3</kbd><kbd>Q</kbd></span></div>
         <div>Reload <kbd>R</kbd></div>
+        <div>Crouch <kbd>C</kbd></div>
         <div>Inspect <kbd>F</kbd></div>
         <div>Scores <kbd>Tab</kbd></div>
         <div>Pause <kbd>Esc</kbd></div>
@@ -713,6 +716,7 @@ function playerFire() {
   const scoped = p.zoom > 0, speed = Math.hypot(p.vx, p.vy);
   let spread = cheat('spread') ? 0 : scoped ? .0015 + clamp((speed-40)/200, 0, 1)*.05 : .07 + clamp(speed/235, 0, 1)*.05;
   if (p.jumpY > .05 && !cheat('spread')) spread += .12;
+  spread *= 1 - .4*(p.crouchAmt || 0);
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize(), up = new THREE.Vector3().crossVectors(right, dir).normalize();
   const a = rand(0, Math.PI*2), r = Math.sqrt(Math.random())*spread;
@@ -745,9 +749,10 @@ function botFire(e, T) {
   const sp = Math.hypot(T.vx, T.vy), dist = Math.hypot(T.x-e.x, T.y-e.y);
   let p = D.awpAcc*(sp > 150 ? .6 : 1)*(T.dashT > 0 ? .4 : 1)*(dist > 1100 ? .8 : 1);
   if (T.isPlayer && T.jumpY > .1) p *= .7;
+  p *= 1 - .15*(T.crouchAmt || 0);
   const hit = Math.random() < p && T.prot <= 0;
   const from = new THREE.Vector3(e.x*S + Math.cos(e.ang)*.9, 1.38, e.y*S + Math.sin(e.ang)*.9);
-  const aimAt = new THREE.Vector3(T.x*S, T.isPlayer ? EYE + T.jumpY - .3 : 1.25, T.y*S);
+  const aimAt = new THREE.Vector3(T.x*S, T.isPlayer ? EYE - .55*(T.crouchAmt || 0) + T.jumpY - .3 : 1.25 - .45*(T.crouchAmt || 0), T.y*S);
   if (!hit) aimAt.add(new THREE.Vector3(rand(-1, 1), rand(-.6, .9), rand(-1, 1)).normalize().multiplyScalar(rand(.6, 1.3)));
   const dir = aimAt.clone().sub(from).normalize();
   const w = castWorld(from, dir, false);
@@ -931,20 +936,35 @@ document.addEventListener('mousemove', e => {
 });
 cv.addEventListener('mousedown', e => {
   if (state !== 'play') return;
-  if (lockOK && document.pointerLockElement !== cv) { requestLock(); return; }
+  if (lockOK && !touchMode && !isLocked()) { requestLock(); return; }
   if (e.button === 0) { mouse.L = true; if (player.weapon === 'awp') playerFire(); }
   if (e.button === 2) altFire();
 });
 addEventListener('mouseup', e => { if (e.button === 0) mouse.L = false; if (e.button === 2) mouse.R = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
+// Mouse lock. Browsers refuse a re-lock for about a second after Esc, and never allow one from the Esc key.
+// A refusal after the lock has worked once is that cooldown: show "Click to aim" and lock on the next click.
+// Only a page that has never been able to lock (some embedded views) falls back to plain mouse movement.
+let lockEver = false;
+const isLocked = () => document.pointerLockElement === cv;
 function requestLock() {
-  if (touchMode || !lockOK) return;
-  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => lockFail()); } catch (e) { lockFail(); }
+  if (touchMode || !lockOK || isLocked()) return;
+  try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => lockRefused()); } catch (e) { lockRefused(); }
 }
-function lockFail() { lockOK = false; if (state === 'play') $('lockHint').hidden = false; }
-document.addEventListener('pointerlockerror', lockFail);
+function lockRefused() {
+  if (lockEver) return;
+  lockOK = false; if (state === 'play') $('lockHint').hidden = false;
+}
+function updateAimPrompt() {
+  const g = $('game');
+  g.classList.toggle('locked', isLocked() || !lockOK);
+  $('aimPrompt').hidden = !(state === 'play' && lockOK && !isLocked() && !touchMode);
+}
+document.addEventListener('pointerlockerror', lockRefused);
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement !== cv && state === 'play' && lockOK) pause();
+  if (isLocked()) lockEver = true;
+  updateAimPrompt();
+  if (!isLocked() && state === 'play' && lockOK) pause();
 });
 addEventListener('blur', () => { keys.clear(); mouse.L = mouse.R = false; if (state === 'play') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') pause(); });
@@ -1159,7 +1179,7 @@ function updViewmodel(dt, t) {
   const sp = clamp(Math.hypot(p.vx, p.vy)/235, 0, 1.2), idle = 1 - clamp(sp, 0, 1), br = Math.sin(t*1.6), d = p.dashPose;
   const landK = Math.sin(vmLand*Math.PI);
   const ox = Math.sin(p.walk)*.014*sp - vmSwayX*.25 + d*.05;
-  const oy = -Math.abs(Math.cos(p.walk))*.014*sp + br*.004*idle + vmSwayY*.15 - landK*.03 + (air ? .015 : 0) - d*.06;
+  const oy = -.02*(p.crouchAmt || 0) - Math.abs(Math.cos(p.walk))*.014*sp + br*.004*idle + vmSwayY*.15 - landK*.03 + (air ? .015 : 0) - d*.06;
   const orx = br*.012*idle + vmSwayY*.7 - d*.4 + landK*.1, ory = vmSwayX*1.0, orz = Math.sin(p.walk)*.035*sp - d*.6;
   vmKnife.visible = p.alive && p.weapon === 'knife';
   vmAwp.visible = p.alive && p.weapon === 'awp' && p.zoom === 0;
@@ -1549,7 +1569,7 @@ function readPeers(ch) {
     e.hp = clamp(num(pr.hp, 100), 0, 100); e.zoom = num(pr.z) | 0;
     e.kills = (pr.r | 0) === NET.round ? clamp(num(pr.k) | 0, 0, 999) : 0;
     e.deaths = (pr.r | 0) === NET.round ? clamp(num(pr.d) | 0, 0, 999) : 0;
-    e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0;
+    e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0; e.crouchAmt = clamp(num(pr.cr), 0, 1);
     if ((pr.r | 0) > NET.round) newRound(pr.r | 0);
     const w = pr.w === 'awp' ? 'awp' : 'knife';
     if (w !== e.weapon) { e.weapon = w; dropRemote(e); e.gone = false; buildFighter(e); applyCheatVisuals(); }
@@ -1637,7 +1657,7 @@ function netFrame() {
   NET.lastSent = now;
   const r2 = v => Math.round(v*100)/100;
   NET.room.presence({
-    hr:1, rm:NET.code, md:mode, cx:NET.cheatsRoom ? 1 : 0, st:'play', n:NET.nick, c:NET.color, f:finish, w:p.weapon,
+    hr:1, rm:NET.code, md:mode, cx:NET.cheatsRoom ? 1 : 0, cr:Math.round((p.crouchAmt || 0)*10)/10, st:'play', n:NET.nick, c:NET.color, f:finish, w:p.weapon,
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
@@ -1672,7 +1692,7 @@ function update(dt) {
     updSwing(e, dt);
     let sp = e.weapon === 'awp' ? (e.isPlayer && e.zoom > 0 ? 95 : 195) : 235;
     if (e.swing && e.swing.type === 'stab' && e.swing.t < SPEC.stab.act) sp *= .45;
-    if (e.isPlayer && keys.has('KeyC')) sp *= .5;
+    if (e.isPlayer) { e.crouchAmt = (e.crouchAmt || 0) + ((keys.has('KeyC') && e.alive ? 1 : 0) - (e.crouchAmt || 0))*Math.min(1, dt*12); sp *= 1 - .55*e.crouchAmt; }
     if (e.isPlayer && cheat('speed')) sp *= 2;
     if (e.dashT > 0) { e.dashT -= dt; e.vx = e.dashX*760; e.vy = e.dashY*760; }
     else { const k = Math.min(1, dt*11); e.vx += (e.ai.mx*sp - e.vx)*k; e.vy += (e.ai.my*sp - e.vy)*k; }
@@ -1724,9 +1744,11 @@ function syncFighters(t) {
     const stride = step*.62*run*dir*(1 - Math.abs(side)*.5);
     M.legs[0].rotation.set(-side*step*.28*run, 0, stride + d*.8);
     M.legs[1].rotation.set(side*step*.28*run, 0, -stride - d*.9);
+    const cr = e.crouchAmt || 0;
+    for (const L of M.legs) { L.position.y = .84 - .45*cr; L.scale.y = 1 - .45*cr; }
     // upper body: breathe when idle, bob with each step, lean into the direction of travel, crouch into a dash
-    M.body.position.y = lift*.05*run + breath*.012*idle - d*.13;
-    M.body.rotation.z = -(fwd*.14*m01 + d*.5);
+    M.body.position.y = lift*.05*run + breath*.012*idle - d*.13 - .45*cr;
+    M.body.rotation.z = -(fwd*.14*m01 + d*.5 + cr*.15);
     M.body.rotation.x = side*.13*m01 + step*.035*run;
     M.head.rotation.set(breath*.02*idle, Math.sin(t*.6 + e.seed*2)*.3*idle*(e.ai.target ? .3 : 1), -breath*.03*idle + d*.25);
     // free arm swings against the legs; on AWP it holds the forend
@@ -1766,7 +1788,7 @@ function render(t, dt) {
   const deadDrop = p.alive ? 0 : clamp(p.deadT/.5, 0, 1);
   const bob = p.alive ? Math.abs(Math.sin(p.walk))*.035*clamp(Math.hypot(p.vx, p.vy)/235, 0, 1) : 0;
   const sx = shake ? rand(-shake, shake)*.004 : 0, sy = shake ? rand(-shake, shake)*.004 : 0;
-  camera.position.set(p.x*S, EYE - deadDrop*1.25 + p.jumpY + bob, p.y*S);
+  camera.position.set(p.x*S, EYE - .55*(p.crouchAmt || 0)*(1 - deadDrop) - deadDrop*1.25 + p.jumpY + bob, p.y*S);
   const lat = (-p.vx*Math.sin(p.ang) + p.vy*Math.cos(p.ang))/235;
   camRoll += ((p.alive ? -lat*.018 - p.dashPose*Math.sign(lat || 1)*.03 : 0) - camRoll)*Math.min(1, dt*8);
   camera.rotation.set(p.pitch + sy - (p.alive ? Math.sin(vmLand*Math.PI)*.015 : 0), -p.ang - Math.PI/2 + sx, deadDrop*.35 + camRoll);
@@ -1781,6 +1803,7 @@ function render(t, dt) {
 /* ---------- loop ---------- */
 let last = performance.now();
 function frame(now) {
+  updateAimPrompt();
   const dt = Math.min(1/30, (now - last)/1000)*(cheat('slowmo') && state === 'play' ? .4 : 1); last = now; perfNow = now/1000;
   if (state === 'play') update(dt);
   render(now/1000, dt);
