@@ -150,6 +150,7 @@ kbd{font:600 11px var(--body);color:var(--bone);background:#2a2e33;border:1px so
 .fld input{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 15px var(--body);padding:9px 10px;width:150px}
 .go-btn:disabled{opacity:.45;cursor:default}
 .netstatus{font-size:13px;color:var(--steel)}
+.ver{font-size:11px;color:#6c757e;letter-spacing:.08em}
 .cxbtn{padding:9px 12px}
 .cxbtn[aria-pressed="true"]{border-color:var(--sodium);color:var(--sodium);background:#26221c}
 .netstatus b{color:var(--bone)}
@@ -286,6 +287,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         </div>
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
+      <p class="ver" id="ver">Version 4 Oct 2026 · 15:40 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -952,7 +954,7 @@ function requestLock() {
   try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => lockRefused()); } catch (e) { lockRefused(); }
 }
 function lockRefused() {
-  if (lockEver) return;
+  if (lockEver || window.top === window.self) return;
   lockOK = false; if (state === 'play') $('lockHint').hidden = false;
 }
 function updateAimPrompt() {
