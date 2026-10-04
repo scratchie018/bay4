@@ -78,6 +78,12 @@ def build(spec):
         tint = c[6] if len(c) > 6 else spec.get('cover_tint', '#ffffff')
         add(dict(name=f'Cover {i+1}', kind='solid', shape='box', pos=[(x + w/2)*CELL, 0, (y + h/2)*CELL],
                  size=[w*CELL*.9, tall, h*CELL*.9], rotY=0, mat=mat, tint=tint))
+    for i, pr in enumerate(spec.get('props', [])):
+        o = dict(name=pr.get('name', f'Prop {i+1}'), kind=pr.get('kind', 'deco'), shape=pr.get('shape', 'box'), pos=[pr['x'], pr.get('y0', 0), pr['z']],
+                 size=[pr['w'], pr['h'], pr['d']], rotY=pr.get('rot', 0), mat=pr.get('mat', 'plain'), tint=pr.get('tint', '#ffffff'))
+        if pr.get('lamp'):
+            add(dict(name=f'Lamp {i+1}', kind='lamp', pos=[pr['x'], pr['lamp'], pr['z']], light=dict(color=pr.get('lamp_color', '#ffd7a0'), int=pr.get('lamp_int', 1.4), range=pr.get('lamp_range', 18))))
+        if pr['h'] > 0: add(o)
     cx, cy = cw*CELL/2, ch*CELL/2
     # keep every spawn at least 2 cells (4 m) from the others: nudge crowded ones to a nearby open cell
     blocked = {(c[1] + dx, c[2] + dy) for c in spec.get('cover', []) for dx in range(c[3]) for dy in range(c[4])}
@@ -130,10 +136,36 @@ def build(spec):
     return m
 
 
+
+# ---------------- prop helpers (metres) ----------------
+def P(x, z, w, h, d, mat, kind='deco', shape='box', tint='#ffffff', y0=0, rot=0, name=None, **kw):
+    o = dict(x=x, z=z, w=w, h=h, d=d, mat=mat, kind=kind, shape=shape, tint=tint, y0=y0, rot=rot); o.update(kw)
+    if name: o['name'] = name
+    return o
+def barrel(x, z, tint='#9b3b2f'): return [P(x, z, .7, 1.0, .7, 'tex:ribbed', 'solid', 'cyl', tint, name='Barrel')]
+def crate_stack(x, z, mat='tex:planks', big=1.3): return [P(x, z, big, 1.2, big, mat, 'solid', name='Crate'), P(x + .15, z - .1, big*.75, .9, big*.75, mat, 'solid', y0=1.2, name='Crate')]
+def pine(x, z, leaf='#3f6b45', snow=False):
+    t = '#e8eef3' if snow else leaf
+    return [P(x, z, .45, 2.4, .45, 'tex:logs', name='Trunk', shape='cyl'), P(x, z, 2.6, 1.1, 2.6, 'grass', shape='cyl', tint=t, y0=1.6, name='Pine'),
+            P(x, z, 1.8, 1.0, 1.8, 'grass', shape='cyl', tint=t, y0=2.6, name='Pine'), P(x, z, .9, .9, .9, 'grass', shape='cyl', tint=t, y0=3.5, name='Pine')]
+def lamp_post(x, z, color='#ffd7a0'): return [P(x, z, .16, 3.6, .16, 'tex:plate', 'solid', 'cyl', '#444a52', name='Lamp post', lamp=3.7, lamp_color=color)]
+def awning(x, z, w, d, tint): return [P(x, z, w, .12, d, 'plain', tint=tint, y0=2.6, name='Awning')] + [P(x + sx*(w/2 - .1), z + sz*(d/2 - .1), .1, 2.6, .1, 'tex:lightwood', name='Pole') for sx in (-1, 1) for sz in (-1, 1)]
+def pipe(x, z, h=6, tint='#6a7078'): return [P(x, z, .4, h, .4, 'tex:ribbed', shape='cyl', tint=tint, name='Pipe')]
+def cart(x, z, rot=0): return [P(x, z, 1.4, .9, 2.0, 'tex:planks', 'solid', rot=rot, y0=.25, name='Mine cart'), P(x, z, 1.5, .25, 1.8, 'tex:plate', 'solid', rot=rot, name='Cart base')]
+def rail(x0, z0, length, along='z'): return [P(x0 if along == 'z' else x0 + length/2, z0 + length/2 if along == 'z' else z0, 1.4 if along == 'z' else length, .04, length if along == 'z' else 1.4, 'tex:planks', name='Rails', tint='#6b5a48')]
+def stripes(x, z, w, d): return [P(x, z, w, .02, d, 'hazard', name='Floor marking', y0=.004)]
+def rack(x, z, rot=0): return [P(x, z, .8, 2.2, .7, 'tex:plate', 'solid', rot=rot, tint='#3a4048', name='Server rack')]
+def desk(x, z, rot=0): return [P(x, z, 1.6, .78, .8, 'tex:lightwood', 'solid', rot=rot, name='Desk')]
+def campfire(x, z): return [P(x, z, .9, .25, .9, 'tex:lava', shape='cyl', name='Campfire', lamp=.8, lamp_color='#ff9a40', lamp_int=1.6, lamp_range=12),
+                            P(x, z, 1.4, .2, 1.4, 'tex:rock', 'solid', 'cyl', name='Fire ring')]
+def snowpile(x, z, rot=0): return [P(x, z, 2.4, .9, 1.6, 'tex:snow', shape='wedge', rot=rot, name='Snow drift')]
+def bollard(x, z): return [P(x, z, .35, .8, .35, 'tex:plate', 'solid', 'cyl', '#c9a33b', name='Bollard')]
+def flat(lists): return [p for l in lists for p in l]
+
 # ---------------- maps ----------------
 # coordinates are (x0, y0, x1, y1) in cells, inclusive. Team A spawns at the bottom, team B at the top.
 MAPS = [
-    dict(id='quarry', name='Quarry', about='Open stone quarry. Giant boulders split it into three lanes around a central rock.',
+    dict(id='quarry', props=flat([crate_stack(10, 26), crate_stack(58, 32), crate_stack(36, 20), barrel(9, 8), barrel(10, 9), barrel(62, 50), barrel(63, 51), cart(46, 12), cart(26, 46, .3), rail(45.3, 4, 18), rail(25.3, 40, 16), pine(4, 4), pine(68, 56), pine(4, 56), pine(68, 4)]), name='Quarry', about='Open stone quarry. Giant boulders split it into three lanes around a central rock.',
          size=(36, 30), wall_mat='tex:rock', floor_mat='tex:sand', cover_mat='tex:planks', ambient=1.1, sky='#bcd2e6', fog=170, wall_h=6,
          open=[(1, 1, 34, 28)],
          cover=[('R', 6, 4, 4, 6, 'tex:rock'), ('R', 6, 20, 4, 6, 'tex:rock'), ('R', 14, 1, 3, 7, 'tex:rock'), ('R', 14, 22, 3, 7, 'tex:rock'),
@@ -142,16 +174,16 @@ MAPS = [
                 ('c', 20, 9, 1, 1), ('c', 15, 19, 1, 1), ('C', 19, 25, 2, 1, 'tex:plate'), ('C', 15, 3, 2, 1, 'tex:plate')],
          spawn_a=[(2, 3), (2, 7), (2, 11), (2, 15), (2, 19), (2, 23), (2, 26), (4, 9)],
          spawn_b=[(33, 3), (33, 7), (33, 11), (33, 15), (33, 19), (33, 23), (33, 26), (31, 21)]),
-    dict(id='market', name='Market', about='Town square with a fountain and market stalls, streets on four sides and alleys around the edge.',
+    dict(id='market', props=flat([awning(25, 24, 5, 2.4, '#b8432f'), awning(43, 24, 5, 2.4, '#2f7fb8'), awning(25, 44, 5, 2.4, '#3f9a52'), awning(43, 44, 5, 2.4, '#c9a33b'), lamp_post(21, 21), lamp_post(47, 21), lamp_post(21, 47), lamp_post(47, 47), barrel(9, 9, '#7b5a3a'), barrel(59, 59, '#7b5a3a'), crate_stack(58, 10, 'tex:lightwood'), crate_stack(10, 58, 'tex:lightwood'), [P(34, 34, 4.4, .9, 4.4, 'tex:cobble', 'solid', 'cyl', name='Fountain'), P(34, 34, .7, 2.6, .7, 'tex:cobble', 'solid', 'cyl', name='Fountain pillar'), P(34, 34, 3.8, .06, 3.8, 'tex:ice', shape='cyl', tint='#7fb3d8', y0=.86, name='Water')]]), name='Market', about='Town square with a fountain and market stalls, streets on four sides and alleys around the edge.',
          size=(34, 34), wall_mat='tex:plaster', floor_mat='tex:pavers', cover_mat='tex:lightwood', ambient=1.05, sky='#c4d8ea', fog=160,
          open=[(10, 10, 23, 23), (15, 1, 18, 10), (15, 23, 18, 32), (1, 15, 10, 18), (23, 15, 32, 18),
                (3, 3, 30, 5), (3, 28, 30, 30), (3, 3, 5, 30), (28, 3, 30, 30), (10, 6, 12, 10), (21, 23, 23, 27)],
-         cover=[('P', 16, 16, 2, 2, 'tex:cobble'), ('c', 12, 12, 2, 1), ('c', 20, 12, 2, 1), ('c', 12, 21, 2, 1), ('c', 20, 21, 2, 1),
+         cover=[('c', 12, 12, 2, 1), ('c', 20, 12, 2, 1), ('c', 12, 21, 2, 1), ('c', 20, 21, 2, 1),
                 ('C', 11, 16, 1, 2, 'tex:redbrick'), ('C', 22, 16, 1, 2, 'tex:redbrick'), ('c', 16, 4, 1, 1), ('c', 17, 29, 1, 1),
                 ('c', 4, 10, 1, 1), ('c', 29, 23, 1, 1), ('C', 8, 4, 1, 1), ('C', 25, 29, 1, 1), ('c', 7, 16, 1, 1), ('c', 26, 17, 1, 1)],
          spawn_a=[(4, 6), (4, 10), (4, 14), (4, 19), (4, 23), (4, 27), (7, 29), (7, 4)],
          spawn_b=[(29, 6), (29, 10), (29, 14), (29, 19), (29, 23), (29, 27), (26, 29), (26, 4)]),
-    dict(id='foundry', name='Foundry', about='Steel works under orange lamps. Lava channels split the floor; cross on the central bridge or go around.',
+    dict(id='foundry', props=flat([pipe(3, 3), pipe(3, 49), pipe(57, 3), pipe(57, 49), pipe(19, 3, 6, '#8a5a3a'), pipe(41, 49, 6, '#8a5a3a'), stripes(29, 26, 6, .3), stripes(29, 23, 6, .3), stripes(29, 29, 6, .3), barrel(36, 6, '#c9a33b'), barrel(37, 7, '#c9a33b'), barrel(23, 46, '#c9a33b'), crate_stack(52, 38, 'tex:plate'), crate_stack(8, 14, 'tex:plate')]), name='Foundry', about='Steel works under orange lamps. Lava channels split the floor; cross on the central bridge or go around.',
          size=(30, 26), wall_mat='tex:ribbed', floor_mat='tex:plate', cover_mat='tex:ribbed', ambient=.5, sky='#120d0a', fog=70, roof='solid',
          wall_h=6, lamp_y=5, lamp_color='#ffb070',
          lamps=[(5, 4), (14, 4), (24, 4), (5, 12), (24, 12), (14, 12), (5, 21), (14, 21), (24, 21), (10, 8), (19, 17), (19, 8)],
@@ -161,7 +193,7 @@ MAPS = [
                 ('C', 4, 7, 2, 2), ('C', 24, 16, 2, 2), ('c', 5, 17, 1, 1), ('c', 24, 8, 1, 1), ('P', 14, 9, 1, 1), ('P', 14, 16, 1, 1)],
          spawn_a=[(2, 2), (5, 2), (2, 5), (7, 3), (2, 9), (11, 3), (16, 2), (25, 2)],
          spawn_b=[(27, 23), (24, 23), (27, 20), (22, 22), (27, 16), (18, 23), (13, 23), (4, 23)]),
-    dict(id='frost', name='Frost', about='Snowed-in outpost: log cabins, ice ridges and fences across a frozen yard.',
+    dict(id='frost', props=flat([pine(4, 18, snow=True), pine(64, 38, snow=True), pine(30, 20, snow=True), pine(38, 36, snow=True), pine(8, 46, snow=True), pine(60, 10, snow=True), campfire(34, 9), campfire(34, 47), snowpile(20, 12), snowpile(48, 44, 3.14), snowpile(12, 34, 1.2), snowpile(56, 22, -1.2), crate_stack(24, 30, 'tex:logs'), crate_stack(44, 26, 'tex:logs')]), name='Frost', about='Snowed-in outpost: log cabins, ice ridges and fences across a frozen yard.',
          size=(34, 28), wall_mat='tex:ice', floor_mat='tex:snow', cover_mat='tex:logs', ambient=1.2, sky='#d7e4ef', fog=110, wall_h=5,
          open=[(1, 1, 32, 26)],
          cover=[('P', 5, 5, 4, 3, 'tex:logs'), ('P', 25, 5, 4, 3, 'tex:logs'), ('P', 5, 20, 4, 3, 'tex:logs'), ('P', 25, 20, 4, 3, 'tex:logs'),
@@ -170,7 +202,7 @@ MAPS = [
                 ('c', 16, 22, 2, 1), ('C', 8, 13, 1, 1), ('C', 25, 13, 1, 1)],
          spawn_a=[(3, 25), (7, 25), (11, 25), (15, 25), (19, 25), (23, 25), (27, 25), (31, 25)],
          spawn_b=[(3, 2), (7, 2), (11, 2), (15, 2), (19, 2), (23, 2), (27, 2), (31, 2)]),
-    dict(id='shipyard', name='Shipyard', about='Container yard at the docks. Lots of cover, lanes between stacks.',
+    dict(id='shipyard', props=flat([bollard(4, 47), bollard(12, 47), bollard(20, 47), bollard(28, 47), bollard(36, 47), bollard(44, 47), bollard(52, 47), bollard(60, 47), stripes(32, 24, .3, 40), barrel(30, 12, '#3f7fc0'), barrel(31, 13, '#c0563f'), barrel(33, 35, '#4f9a5c'), crate_stack(46, 30), crate_stack(18, 18), [P(32, 2, 1.2, 12, 1.2, 'tex:ribbed', 'solid', tint='#c9a33b', name='Crane leg'), P(32, 46, 1.2, 12, 1.2, 'tex:ribbed', 'solid', tint='#c9a33b', name='Crane leg'), P(32, 24, 1.4, 1.2, 46, 'tex:ribbed', tint='#c9a33b', y0=12, name='Crane beam')]]), name='Shipyard', about='Container yard at the docks. Lots of cover, lanes between stacks.',
          size=(32, 24), wall_mat='tex:ribbed', floor_mat='tex:yard', cover_mat='tex:ribbed', ambient=.95, sky='#93a7bb', fog=120,
          open=[(1, 1, 30, 22)],
          cover=[('P', 5, 4, 3, 1, 'tex:ribbed', '#c0563f'), ('P', 5, 9, 1, 3, 'tex:ribbed', '#3f7fc0'), ('C', 9, 6, 2, 1, 'tex:ribbed', '#4f9a5c'),
@@ -182,7 +214,7 @@ MAPS = [
                 ('c', 29, 12, 1, 1), ('c', 2, 11, 1, 1)],
          spawn_a=[(2, 3), (2, 6), (2, 9), (2, 14), (2, 17), (2, 20), (3, 12), (3, 7)],
          spawn_b=[(29, 3), (29, 6), (29, 9), (29, 14), (29, 17), (29, 20), (28, 11), (28, 16)]),
-    dict(id='arena', name='Arena', about='Small mirrored arena for 1v1 and 2v2. Pillars and low walls, nowhere to hide for long.',
+    dict(id='arena', props=flat([stripes(18, 18, 6, .25), stripes(18, 18, .25, 6), barrel(4, 32), barrel(32, 4), pipe(2, 2, 7), pipe(34, 34, 7), pipe(2, 34, 7), pipe(34, 2, 7)]), name='Arena', about='Small mirrored arena for 1v1 and 2v2. Pillars and low walls, nowhere to hide for long.',
          size=(18, 18), wall_mat='tex:darkstone', floor_mat='tex:darkcobble', cover_mat='hazard', ambient=.7, sky='#1a1d22', fog=80,
          roof='solid', lamp_y=5.2, lamps=[(4, 4), (13, 4), (4, 13), (13, 13), (8, 8)],
          open=[(1, 1, 16, 16)],
@@ -190,7 +222,7 @@ MAPS = [
                 ('c', 8, 14, 2, 1), ('c', 3, 8, 1, 2), ('c', 14, 8, 1, 2), ('C', 8, 8, 2, 2)],
          spawn_a=[(2, 15), (4, 15), (2, 13), (6, 15), (2, 11), (8, 15), (10, 15), (2, 9)],
          spawn_b=[(15, 2), (13, 2), (15, 4), (11, 2), (15, 6), (9, 2), (7, 2), (15, 8)]),
-    dict(id='lab', name='Lab', about='Indoor research lab: offices, a server hall and long corridors under strip lights.',
+    dict(id='lab', props=flat([rack(24, 3), rack(25.2, 3), rack(26.4, 3), rack(33.6, 3), rack(34.8, 3), rack(36, 3), desk(6, 4), desk(6, 7), desk(52, 41), desk(52, 44), desk(28, 41, 1.57), desk(32, 41, 1.57), barrel(55, 4, '#c9a33b'), stripes(30, 23, 50, .3), crate_stack(9, 37, 'tex:plate')]), name='Lab', about='Indoor research lab: offices, a server hall and long corridors under strip lights.',
          size=(30, 24), wall_mat='tex:labwall', floor_mat='tex:labtile', cover_mat='plain', cover_tint='#6f7b86',
          ambient=.45, sky='#0c0e11', fog=70, roof='solid', lamp_y=3.7, lamp_color='#e8f2ff', wall_h=4,
          lamps=[(4, 4), (14, 3), (25, 4), (4, 12), (14, 12), (25, 12), (4, 20), (14, 20), (25, 20), (9, 8), (20, 16)],
