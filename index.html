@@ -151,6 +151,11 @@ kbd{font:600 11px var(--body);color:var(--bone);background:#2a2e33;border:1px so
 .go-btn:disabled{opacity:.45;cursor:default}
 .netstatus{font-size:13px;color:var(--steel)}
 .ver{font-size:11px;color:#6c757e;letter-spacing:.08em}
+#ownerPanel{z-index:20}
+#ownerPanel input{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 15px var(--body);padding:9px 10px;min-width:0;flex:1}
+#ownerPanel select{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 14px var(--body);padding:8px;min-width:180px}
+#announce{left:50%;top:18%;transform:translateX(-50%);max-width:min(720px,90vw);text-align:center;background:rgba(10,11,13,.85);border:1px solid var(--sodium);padding:10px 18px;font-size:18px;font-weight:700;letter-spacing:.04em}
+#announce small{display:block;font-size:10px;letter-spacing:.24em;color:var(--sodium);margin-bottom:4px}
 #mapSelect{background:#0c0d0f;border:1px solid var(--edge);color:var(--bone);font:600 14px var(--body);padding:8px 10px;min-width:200px}
 #teamPick button{padding:7px 10px}
 #mapCode{width:100%;min-height:140px;background:#0c0d0f;color:var(--bone);border:1px solid var(--edge);font:11px ui-monospace,Menlo,monospace;padding:8px;resize:vertical}
@@ -301,10 +306,29 @@ tr.me td{color:var(--sodium);font-weight:700}
         </div>
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
-      <p class="ver" id="ver">Version 4 Oct 2026 · 17:30 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 5 Oct 2026 · 15:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
+  <div class="hud" id="announce" hidden></div>
+  <div class="overlay" id="ownerPanel" hidden>
+    <div class="plate"><div class="in">
+      <div class="eyebrow">OWNER</div>
+      <h2>Owner panel</h2>
+      <div id="ownLocked">
+        <p>Enter the owner password. It unlocks the owner key on this device only.</p>
+        <div class="row"><input type="password" id="ownPw" autocomplete="current-password" aria-label="Owner password"><button class="go-btn" id="ownUnlock" type="button">Unlock</button></div>
+      </div>
+      <div id="ownTools" hidden>
+        <p class="rule" id="ownWhere"></p>
+        <div class="group"><span class="lbl">PLAYERS IN THIS ROOM</span><div class="row"><select id="ownPlayer" aria-label="Player"></select><button class="ghost" id="ownKick" type="button">Kick</button></div></div>
+        <div class="group"><span class="lbl">ANNOUNCEMENT</span><div class="row"><input type="text" id="ownMsg" maxlength="120" aria-label="Announcement"><button class="ghost" id="ownSay" type="button">Show to everyone</button></div></div>
+        <div class="row"><button class="ghost" id="ownEnd" type="button">End the round</button><button class="ghost" id="ownReset" type="button">Reset scores</button></div>
+      </div>
+      <div class="netstatus" id="ownMsgOut" role="status"></div>
+      <div class="row"><button class="ghost" id="ownClose" type="button">Close</button><span class="netstatus">Open or close with <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>O</kbd></span></div>
+    </div></div>
+  </div>
   <div class="overlay" id="mapModal" hidden>
     <div class="plate"><div class="in">
       <div class="eyebrow">CUSTOM MAP</div>
@@ -1830,13 +1854,84 @@ updateNetStatus(); addEventListener('load', updateNetStatus);
 /* A tiny room over WebRTC (PeerJS). The first player to claim a room's id hosts it: everyone sends
    their state to the host, and the host sends everyone's state back out ~20 times a second.
    If the host leaves, the others race to claim the id and the winner hosts from then on. */
+/* Relay room: everyone connects to our Cloudflare relay over a secure WebSocket, which passes updates
+   between players in the room. Works on networks that block direct connections. Same interface as
+   makePeerRoom below; the relay picks the host (longest in the room) for map downloads. */
+function makeRelayRoom(roomId) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`${RELAY_WS}/room/${roomId}`);
+    const listeners = [], others = new Map();
+    let me = null, host = null, myPresence = {}, myUpd = 0, lastSend = 0, pending = null, firing = false, closed = false;
+    const mapWaiters = new Set();
+    const list = () => [{ peer:me, sameTab:true, presence:myPresence, updatedAt:myUpd },
+      ...[...others].map(([id, o]) => ({ peer:id, sameTab:false, presence:o.presence, updatedAt:o.updatedAt }))];
+    const fire = left => { if (left) { for (const fn of listeners) fn({ peers:list(), left }); return; }
+      if (firing) return; firing = true; setTimeout(() => { firing = false; for (const fn of listeners) fn({ peers:list(), left:[] }); }, 0); };
+    const send = m => { if (ws.readyState === 1) ws.send(JSON.stringify(m)); };
+    const flush = () => { pending = null; lastSend = performance.now(); send({ t:'p', p:myPresence }); };
+    const t = setTimeout(() => { try { ws.close(); } catch (e) {} reject(new Error('timeout')); }, 7000);
+    ws.onmessage = ev => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'hello') {
+        clearTimeout(t); me = m.id; host = m.host;
+        for (const q of m.peers || []) if (q.p) others.set(q.id, { presence:q.p, updatedAt:performance.now() });
+        resolve(room);
+      } else if (m.t === 'p' && m.p && typeof m.p === 'object') { others.set(m.id, { presence:m.p, updatedAt:performance.now() }); fire(); }
+      else if (m.t === 'left') { others.delete(m.id); fire([{ peer:m.id }]); }
+      else if (m.t === 'host') host = m.id;
+      else if (m.t === 'getmap') serveMap(m.from);
+      else if (m.t === 'map') for (const w of mapWaiters) w(m.d);
+    };
+    ws.onerror = () => { if (!me) { clearTimeout(t); reject(new Error('relay unreachable')); } };
+    ws.onclose = () => { if (me && !closed) { NET.netError = 'Lost the connection to the relay.'; if (NET.on) toMenu(); else leaveOnline(); updateNetStatus(); } };
+    // the host sends whatever map it's playing on, in 6 KB pieces (the relay limits message size)
+    function serveMap(to) {
+      const cm = currentMap, CH = 6000;
+      if (!cm.data) { send({ t:'map', to, d:{ t:'meta', id:'bay4' } }); return; }
+      const n = Math.ceil(cm.code.length/CH);
+      send({ t:'map', to, d:{ t:'meta', id:cm.id, name:cm.name, n } });
+      let i = 0;
+      const pump = () => { if (ws.readyState !== 1) return; for (let k = 0; k < 8 && i < n; k++, i++) send({ t:'map', to, d:{ t:'c', i, d:cm.code.slice(i*CH, (i+1)*CH) } }); if (i < n) setTimeout(pump, 500); };
+      pump();
+    }
+    const room = {
+      peers:list,
+      onPeers(fn) { listeners.push(fn); setTimeout(() => fn({ peers:list(), left:[] }), 0); return () => {}; },
+      presence(patch) {
+        for (const k in patch) { if (patch[k] === null) delete myPresence[k]; else myPresence[k] = patch[k]; }
+        myPresence = { ...myPresence }; myUpd = performance.now();
+        // about 12 updates a second keeps play smooth and well inside the relay's free allowance
+        const wait = 80 - (performance.now() - lastSend);
+        if (wait <= 0) flush(); else if (!pending) pending = setTimeout(flush, wait);
+        return Promise.resolve();
+      },
+      leave() { closed = true; try { ws.close(); } catch (e) {} },
+      isHost:() => host === me,
+      fetchMap(onProgress) {
+        return new Promise((res, rej) => {
+          let meta = null, parts = [], got = 0;
+          const tm = setTimeout(() => { mapWaiters.delete(w); rej(new Error('timeout')); }, 120000);
+          const w = d => {
+            if (!d || typeof d !== 'object') return;
+            if (d.t === 'meta') { meta = d; if (d.id === 'bay4') { clearTimeout(tm); mapWaiters.delete(w); res({ id:'bay4' }); } else { parts = new Array(Math.max(0, d.n | 0)); onProgress(0, d.name); } return; }
+            if (d.t === 'c' && meta && typeof d.d === 'string' && d.i >= 0 && d.i < parts.length && parts[d.i] === undefined) {
+              parts[d.i] = d.d; got++; onProgress(got/parts.length, meta.name);
+              if (got === parts.length) { clearTimeout(tm); mapWaiters.delete(w); res({ id:meta.id, name:meta.name, code:parts.join('') }); }
+            }
+          };
+          mapWaiters.add(w); send({ t:'getmap' });
+        });
+      },
+    };
+  });
+}
 function makePeerRoom(roomId) {
   const listeners = [], others = new Map();   // peerId -> { presence, updatedAt }
   let me = null, peer = null, hostConn = null, isHost = false, conns = new Map(), myPresence = {}, myUpd = 0, closed = false, lastBroadcast = 0, lastSend = 0;
   const list = () => [{ peer:me, sameTab:true, presence:myPresence, updatedAt:myUpd },
     ...[...others].map(([id, o]) => ({ peer:id, sameTab:false, presence:o.presence, updatedAt:o.updatedAt }))];
   const fire = left => { const ch = { peers:list(), left:left || [] }; for (const fn of listeners) fn(ch); };
-  const opts = { debug:0 };
+  const opts = { debug:0, config:{ iceServers:NET.ice || [{ urls:'stun:stun.l.google.com:19302' }, { urls:'stun:stun.cloudflare.com:3478' }] } };
   function becomeHost() {
     return new Promise((res, rej) => {
       const p = new Peer(roomId, opts);
@@ -1956,10 +2051,22 @@ function makePeerRoom(roomId) {
 }
 
 async function startOnline() {
-  if (!window.Peer || NET.connecting) return;
+  if ((!window.Peer && !RELAY_WS) || NET.connecting) return;
+  if (OWN.kicked && OWN.kicked.code === NET.code && Date.now() < OWN.kicked.until) { $('netStatus').textContent = 'The owner removed you from this room. Try a different room code.'; return; }
   NET.connecting = true; NET.netError = ''; updateNetStatus();
+  // relay for players whose networks block direct connections (Cloudflare TURN via our Worker)
+  if (RELAY_URL && !NET.ice) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 4000);
+      const r = await fetch(RELAY_URL, { signal:ctl.signal }); clearTimeout(t);
+      const j = await r.json(); if (Array.isArray(j.iceServers)) NET.ice = [{ urls:'stun:stun.l.google.com:19302' }, ...j.iceServers];
+    } catch (e) {}
+  }
   try {
-    const room = await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    const rid = `hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}-${NET.code}`;
+    let viaRelay = null;
+    if (RELAY_WS) { try { viaRelay = await makeRelayRoom(rid); } catch (e) { viaRelay = null; } }
+    const room = viaRelay || await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
     NET.room = room;
     NET.onMigrate = id => { NET.myPeer = id; };
     room.onPeers(ch => { for (const p of ch.peers) if (p.sameTab) NET.myPeer = p.peer; if (NET.on) readPeers(ch); });
@@ -2036,7 +2143,8 @@ function readPeers(ch) {
     }
     if (p.updatedAt === e.lastUpd) continue;
     e.lastUpd = p.updatedAt;
-    e.name = cleanText(pr.n, 14) || 'Player';
+    e.name = (cleanText(pr.n, 14) || 'Player') + (e.ownerOk ? ' ★OWNER' : '');
+    readOwner(p, pr, e);
     const num = (v, d = 0) => Number.isFinite(+v) ? +v : d;
     e.snaps.push({ t:now, x:clamp(num(pr.x, e.x), 0, W), y:clamp(num(pr.y, e.y), 0, H), a:num(pr.a), p:clamp(num(pr.p), -1.5, 1.5), j:clamp(num(pr.j), 0, 2) });
     if (e.snaps.length > 12) e.snaps.shift();
@@ -2120,6 +2228,7 @@ function newRound(r) {
   callout(`ROUND ${r + 1}`, `FIRST TO ${LIMIT}`);
 }
 function netFrame() {
+  if (OWN.priv && NET.myPeer && OWN.badgeFor !== `badge|${NET.myPeer}|${NET.nick}`) ownerPresence();
   const p = player, now = performance.now();
   // someone reached the limit: show the board, then everyone starts the next round together
   if (!NET.roundEnd) {
@@ -2138,9 +2247,109 @@ function netFrame() {
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
-    k:p.kills, d:p.deaths, r:NET.round, hits:NET.hits, died:NET.died, shot:NET.shot,
+    k:p.kills, d:p.deaths, r:NET.round, hits:NET.hits, died:NET.died, shot:NET.shot, ob:OWN.priv ? OWN.badge : null, oc:OWN.cmd,
   }).catch(() => {});
 }
+
+const OWNER_KEY = null;
+const RELAY_URL = '';   // optional: a Worker that hands out TURN relay credentials (needs a paid TURN key)
+const RELAY_WS = 'wss://hookring-relay.scratchie018.workers.dev';    // Cloudflare relay (Workers + Durable Objects, free plan), e.g. wss://hookring-relay.NAME.workers.dev
+/* ---------- owner panel ----------
+   The owner key is locked with the owner's password (PBKDF2 + AES-GCM) and only the locked copy is in this
+   page. Unlocking it on the owner's device gives a signing key; every owner command is signed, and every
+   player's game checks the signature against the public key before obeying. */
+const OWN = { priv:null, pub:null, badge:null, badgeFor:'', cmd:null, seen:new Map(), kicked:null };
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+async function ownerPub() {
+  if (!OWN.pub && OWNER_KEY && crypto.subtle) OWN.pub = await crypto.subtle.importKey('spki', b64d(OWNER_KEY.pub), { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
+  return OWN.pub;
+}
+async function ownerVerify(text, sig) {
+  try { const k = await ownerPub(); return !!k && await crypto.subtle.verify({ name:'ECDSA', hash:'SHA-256' }, k, b64d(sig), new TextEncoder().encode(text)); }
+  catch (e) { return false; }
+}
+async function ownerSign(text) { return b64e(await crypto.subtle.sign({ name:'ECDSA', hash:'SHA-256' }, OWN.priv, new TextEncoder().encode(text))); }
+async function unlockOwner(pw) {
+  const k = OWNER_KEY, base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const aes = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:b64d(k.salt), iterations:k.iter, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+  const pk = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64d(k.iv) }, aes, b64d(k.locked));
+  OWN.priv = await crypto.subtle.importKey('pkcs8', pk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+}
+function ownerOpen() {
+  const panel = $('ownerPanel');
+  if (!panel.hidden) { panel.hidden = true; return; }
+  if (state === 'play') pause();
+  panel.hidden = false; $('ownMsgOut').textContent = '';
+  $('ownLocked').hidden = !!OWN.priv; $('ownTools').hidden = !OWN.priv;
+  if (!OWNER_KEY) { $('ownLocked').hidden = true; $('ownMsgOut').textContent = 'No owner key is set up for this game yet.'; return; }
+  if (!OWN.priv) { $('ownPw').value = ''; $('ownPw').focus(); } else ownerRefresh();
+}
+function ownerRefresh() {
+  const others = ents.filter(e => e.remote);
+  $('ownWhere').textContent = NET.on ? `Room ${NET.code}: ${others.length} other player${others.length === 1 ? '' : 's'}. Commands reach everyone in this room.` : 'Join an online room to use these. Commands go to everyone in the room you are in.';
+  const sel = $('ownPlayer'); sel.innerHTML = '';
+  for (const e of others) { const o = document.createElement('option'); o.value = e.peer; o.textContent = e.name; sel.append(o); }
+  for (const id of ['ownKick','ownSay','ownEnd','ownReset']) $(id).disabled = !NET.on;
+  $('ownKick').disabled = !NET.on || !others.length;
+}
+async function ownerSend(k, extra = {}) {
+  if (!OWN.priv || !NET.on) return;
+  const c = { k, rm:NET.code, ts:Date.now(), n:Math.random().toString(36).slice(2, 10), ...extra };
+  const text = JSON.stringify(c);
+  OWN.cmd = { c:text, s:await ownerSign(text) };
+  applyOwnerCommand(c, true);
+}
+function applyOwnerCommand(c, mine) {
+  if (c.k === 'say') {
+    const el = $('announce'); el.innerHTML = '<small>OWNER</small>'; el.append(cleanText(c.m, 120)); el.hidden = false;
+    clearTimeout(applyOwnerCommand.t); applyOwnerCommand.t = setTimeout(() => el.hidden = true, 7000);
+  } else if (c.k === 'end') { NET.roundEnd = performance.now() + 5000; callout('ROUND OVER', 'ENDED BY THE OWNER'); $('board').hidden = false; renderBoard($('boardT')); }
+  else if (c.k === 'reset') newRound(NET.round + 1);
+  else if (c.k === 'kick' && !mine && c.t === NET.myPeer) {
+    OWN.kicked = { code:NET.code, until:Date.now() + 10*60000 };
+    leaveOnline(); toMenu(); $('netStatus').textContent = 'The owner removed you from that room. You can join a different room code.';
+  }
+  if (mine) $('ownMsgOut').textContent = { say:'Announcement sent.', end:'Round ended.', reset:'Scores reset.', kick:'Player removed.' }[c.k] || '';
+}
+// called for every other player's presence: check their owner badge and any owner command they carry
+function readOwner(p, pr, e) {
+  const seen = OWN.seen.get(p.peer) || {}; OWN.seen.set(p.peer, seen);
+  if (pr.ob && typeof pr.ob.s === 'string' && pr.ob.p === p.peer && seen.badge !== pr.ob.s) {
+    seen.badge = pr.ob.s;
+    ownerVerify(`badge|${p.peer}|${cleanText(pr.n, 14)}`, pr.ob.s).then(ok => { e.ownerOk = ok; });
+  }
+  if (pr.oc && typeof pr.oc.c === 'string' && typeof pr.oc.s === 'string' && seen.cmd !== pr.oc.s) {
+    seen.cmd = pr.oc.s;
+    ownerVerify(pr.oc.c, pr.oc.s).then(ok => {
+      if (!ok) return;
+      let c; try { c = JSON.parse(pr.oc.c); } catch (er) { return; }
+      if (c.rm !== NET.code || Math.abs(Date.now() - c.ts) > 120000) return;
+      applyOwnerCommand(c, false);
+    });
+  }
+}
+async function ownerPresence() {
+  // badge: a signature over my peer id and name, so others can show OWNER next to me
+  if (!OWN.priv || !NET.myPeer) return null;
+  const key = `badge|${NET.myPeer}|${NET.nick}`;
+  if (OWN.badgeFor !== key) { OWN.badgeFor = key; OWN.badge = { p:NET.myPeer, s:await ownerSign(key) }; }
+  return OWN.badge;
+}
+addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && e.code === 'KeyO') { e.preventDefault(); e.stopImmediatePropagation(); ownerOpen(); }
+}, true);
+$('ownClose').addEventListener('click', () => { $('ownerPanel').hidden = true; });
+$('ownPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('ownUnlock').click(); });
+$('ownUnlock').addEventListener('click', async () => {
+  $('ownMsgOut').textContent = 'Unlocking…';
+  try { await unlockOwner($('ownPw').value); $('ownPw').value = ''; $('ownLocked').hidden = true; $('ownTools').hidden = false; $('ownMsgOut').textContent = 'Unlocked for this visit.'; ownerRefresh(); ownerPresence(); }
+  catch (er) { $('ownMsgOut').textContent = 'Wrong password.'; }
+});
+$('ownKick').addEventListener('click', () => { const t = $('ownPlayer').value; if (t) { ownerSend('kick', { t }); setTimeout(ownerRefresh, 500); } });
+$('ownSay').addEventListener('click', () => { const m = cleanText($('ownMsg').value, 120); if (m) { ownerSend('say', { m }); $('ownMsg').value = ''; } });
+$('ownEnd').addEventListener('click', () => ownerSend('end'));
+$('ownReset').addEventListener('click', () => ownerSend('reset'));
 
 /* ---------- update ---------- */
 function update(dt) {
@@ -2303,6 +2512,7 @@ function frame(now) {
   updateAimPrompt();
   const dt = Math.min(1/30, (now - last)/1000)*(cheat('slowmo') && state === 'play' ? .4 : 1); last = now; perfNow = now/1000;
   if (state === 'play') update(dt);
+  else if (NET.on) netFrame(dt);   // keep telling the room about us (and owner commands) while paused
   render(now/1000, dt);
   requestAnimationFrame(frame);
 }
