@@ -19,7 +19,7 @@
 }
 html{box-sizing:border-box;height:100%;background:var(--ground)}
 *,*::before,*::after{box-sizing:inherit}
-body{height:100%;background:var(--ground);color:var(--bone);font-family:var(--body);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+body{-webkit-touch-callout:none;height:100%;background:var(--ground);color:var(--bone);font-family:var(--body);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
 #game{position:relative;height:100%;overflow:hidden}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #game.playing.locked #cv{cursor:none}
@@ -179,11 +179,18 @@ tr.me td{color:var(--sodium);font-weight:700}
 #lookZone{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto}
 #stick{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(236,230,218,.25);background:rgba(0,0,0,.25);transform:translate(-50%,-50%);display:none}
 #stick i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:rgba(236,230,218,.35)}
-.tbtns{position:absolute;right:16px;bottom:calc(110px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:auto auto;gap:12px;align-items:end;pointer-events:auto}
+.tbtns{position:absolute;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(110px + env(safe-area-inset-bottom,0px));display:grid;grid-template-areas:"reload crouch jump" "swap alt fire" ". move fire";gap:10px;align-items:center;justify-items:center;pointer-events:auto}
+#tAlt{grid-area:alt}#tFire{grid-area:fire}#tMove{grid-area:move}#tSwap{grid-area:swap}#tJump{grid-area:jump}#tCrouch{grid-area:crouch}#tReload{grid-area:reload}
+.tb.on{background:rgba(240,162,59,.45);border-color:var(--sodium)}
+.tb.sm{width:52px;height:52px;font-size:9px;letter-spacing:.02em}
+.ttop{position:absolute;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));display:flex;gap:8px;pointer-events:auto}
+.ttop .ghost{padding:6px 12px;font-size:12px}
+#game.touch #slots{display:none}
+#rotateHint{position:absolute;left:50%;top:calc(130px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:rgba(10,11,13,.8);border:1px solid var(--edge);padding:6px 12px;font-size:12px;color:var(--steel);white-space:nowrap;pointer-events:none;display:none}
+@media (orientation:portrait){#rotateHint{display:block}}
 .tb{appearance:none;width:64px;height:64px;border-radius:50%;border:2px solid rgba(236,230,218,.35);background:rgba(20,22,25,.6);color:var(--bone);font:700 11px var(--body);letter-spacing:.08em}
 .tb.big{width:84px;height:84px;border-color:var(--sodium);grid-row:span 2}
 .tb:active{background:rgba(240,162,59,.35)}
-#pauseBtn{position:absolute;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));pointer-events:auto;padding:6px 12px;font-size:12px}
 
 @media (max-width:560px){
   .tc .sub{display:none}
@@ -192,6 +199,23 @@ tr.me td{color:var(--sodium);font-weight:700}
   #radar{width:104px;height:104px}
   .kf{font-size:11px}
   .modes{grid-template-columns:1fr}
+}
+/* phones held sideways: everything is short, so shrink the HUD and menus */
+@media (max-height:500px){
+  h1{font-size:clamp(34px,8vh,48px)}
+  .plate .in{padding:14px 18px 18px;gap:12px}
+  #radar{width:96px;height:96px}
+  #clock{font-size:24px}
+  .hpRow b,#ammo{font-size:26px}
+  .tc .sub,.kf{font-size:11px}
+  .tbtns{bottom:calc(78px + env(safe-area-inset-bottom,0px));gap:8px}
+  .tb{width:54px;height:54px}
+  .tb.sm{width:46px;height:46px}
+  .tb.big{width:76px;height:76px}
+  .ttop{top:calc(60px + env(safe-area-inset-top,0px))}
+  .ttop .ghost{padding:4px 10px;font-size:11px}
+  #feed{max-width:34vw}
+  .kf:nth-child(n+3){display:none}
 }
 @media (prefers-reduced-motion:reduce){
   #callout.go{animation-duration:.01s}
@@ -240,8 +264,12 @@ tr.me td{color:var(--sodium);font-weight:700}
       <button class="tb big" id="tFire" type="button">SLASH</button>
       <button class="tb" id="tMove" type="button">DASH</button>
       <button class="tb" id="tSwap" type="button">SWAP</button>
+      <button class="tb" id="tJump" type="button">JUMP</button>
+      <button class="tb sm" id="tCrouch" type="button">CROUCH</button>
+      <button class="tb sm" id="tReload" type="button">RELOAD</button>
     </div>
-    <button class="ghost" id="pauseBtn" type="button">Pause</button>
+    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button></div>
+    <div id="rotateHint">Turn your phone sideways for a bigger view</div>
   </div>
 
   <div class="overlay" id="board" hidden><div class="plate"><div class="in"><div class="eyebrow">SCOREBOARD</div><div class="tblWrap" id="boardT"></div></div></div></div>
@@ -292,7 +320,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div>Scores <kbd>Tab</kbd></div>
         <div>Pause <kbd>Esc</kbd></div>
       </div>
-      <p class="rule" id="touchHelp" hidden>Drag on the left to move and on the right to look. The buttons on the right attack, scope, dash and swap weapons.</p>
+      <p class="rule" id="touchHelp" hidden>Drag on the left side to move and on the right side to look. Hold FIRE or SLASH and slide your thumb to aim while attacking. Turn your phone sideways for the best view.</p>
       <div id="err" hidden></div>
       <div class="row"><button class="go-btn" id="start" type="button">Play vs bots</button></div>
       <div class="group online">
@@ -306,7 +334,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         </div>
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
-      <p class="ver" id="ver">Version 5 Oct 2026 · 15:30 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 5 Oct 2026 · 16:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -1362,10 +1390,36 @@ lz.addEventListener('pointerdown', e => { if (look.id !== null) return; look.id 
 lz.addEventListener('pointermove', e => { if (e.pointerId !== look.id) return; lookBy((e.clientX-look.x)*1.6, (e.clientY-look.y)*1.6); look.x = e.clientX; look.y = e.clientY; });
 const endLook = e => { if (e.pointerId === look.id) look.id = null; };
 lz.addEventListener('pointerup', endLook); lz.addEventListener('pointercancel', endLook);
-$('tFire').addEventListener('pointerdown', e => { e.preventDefault(); mouse.L = true; if (player.weapon === 'awp') playerFire(); });
-for (const ev of ['pointerup','pointerleave','pointercancel']) { $('tFire').addEventListener(ev, () => mouse.L = false); $('tAlt').addEventListener(ev, () => mouse.R = false); }
+// the fire button doubles as a look pad: hold it and slide to keep aiming while attacking
+const fireLook = { id:null, x:0, y:0 };
+$('tFire').addEventListener('pointerdown', e => {
+  e.preventDefault(); mouse.L = true; if (player.weapon === 'awp') playerFire();
+  fireLook.id = e.pointerId; fireLook.x = e.clientX; fireLook.y = e.clientY; try { $('tFire').setPointerCapture(e.pointerId); } catch (er) {}
+});
+$('tFire').addEventListener('pointermove', e => { if (e.pointerId !== fireLook.id) return; lookBy((e.clientX-fireLook.x)*1.6, (e.clientY-fireLook.y)*1.6); fireLook.x = e.clientX; fireLook.y = e.clientY; });
+for (const ev of ['pointerup','pointercancel']) $('tFire').addEventListener(ev, e => { if (e.pointerId === fireLook.id) fireLook.id = null; mouse.L = false; });
+for (const ev of ['pointerup','pointerleave','pointercancel']) $('tAlt').addEventListener(ev, () => mouse.R = false);
+$('tJump').addEventListener('pointerdown', e => { e.preventDefault(); if (player.alive) player.wantJump = true; });
+$('tCrouch').addEventListener('pointerdown', e => { e.preventDefault(); if (keys.has('KeyC')) keys.delete('KeyC'); else keys.add('KeyC'); });
+$('tReload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
+$('scoresBtn').addEventListener('click', () => { const b = $('board'); b.hidden = !b.hidden; if (!b.hidden) renderBoard($('boardT')); });
+$('board').addEventListener('click', () => { if (touchMode) $('board').hidden = true; });
+// phones: go fullscreen and sideways when a match starts (needs the tap that started it)
+function phoneScreen() {
+  if (!touchMode) return;
+  const el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+  try {
+    if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      const r = fs.call(el, { navigationUI:'hide' });
+      if (r && r.then) r.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
+    }
+  } catch (e) {}
+}
+$('start').addEventListener('click', phoneScreen);
+$('startOnline').addEventListener('click', phoneScreen);
+$('resume').addEventListener('click', phoneScreen);
 $('tAlt').addEventListener('pointerdown', e => { e.preventDefault(); altFire(); });
-$('tMove').addEventListener('pointerdown', e => { e.preventDefault(); jumpOrDash(); });
+$('tMove').addEventListener('pointerdown', e => { e.preventDefault(); const [mx, my] = moveDir(); if (mx || my) dash(player, mx, my); else dash(player, Math.cos(player.ang), Math.sin(player.ang)); });
 $('tSwap').addEventListener('pointerdown', e => { e.preventDefault(); swapTo(player.weapon === 'awp' ? 'knife' : 'awp'); });
 $('pauseBtn').addEventListener('click', () => pause());
 
@@ -1621,16 +1675,20 @@ function startMatch() {
   for (const id of ['menu','end','pause','board']) $(id).hidden = true;
   $('hud').hidden = false; $('touch').hidden = !touchMode;
   $('tFire').textContent = mode === 'awp' ? 'FIRE' : 'SLASH'; $('tAlt').textContent = mode === 'awp' ? 'SCOPE' : 'STAB';
-  $('tSwap').hidden = mode !== 'awp'; $('tMove').textContent = mode === 'awp' ? 'JUMP' : 'DASH';
+  touchKey = '';
   state = 'play'; $('game').classList.add('playing');
   $('lockHint').hidden = lockOK || touchMode;
   requestLock();
   applyCheatVisuals();
 }
+let touchKey = '';
 function updTouchLabels() {
   if (!touchMode || !player) return;
-  const k = player.weapon === 'knife';
-  $('tFire').textContent = k ? 'SLASH' : 'FIRE'; $('tAlt').textContent = k ? 'STAB' : 'SCOPE'; $('tMove').textContent = k ? 'DASH' : 'JUMP';
+  const k = player.weapon === 'knife', c = keys.has('KeyC'), key = `${k}${c}${mode}`;
+  if (key === touchKey) return; touchKey = key;
+  $('tFire').textContent = k ? 'SLASH' : 'FIRE'; $('tAlt').textContent = k ? 'STAB' : 'SCOPE';
+  $('tMove').hidden = !k; $('tReload').hidden = k; $('tSwap').hidden = mode !== 'awp';
+  $('tCrouch').classList.toggle('on', c);
 }
 function pause() {
   if (state !== 'play') return;
@@ -1741,7 +1799,11 @@ $('mapCodeLoad').addEventListener('click', () => {
   if (!kept) $('mapStatus').textContent += ' It is too big for this browser to remember, so paste it again next visit.';
 });
 queueMicrotask(syncMapUi);
-if (touchMode) { $('keys').hidden = true; $('touchHelp').hidden = false; }
+if (touchMode) {
+  $('keys').hidden = true; $('touchHelp').hidden = false; $('game').classList.add('touch');
+  $('m-awp').querySelector('span').textContent = 'One shot to the head or body kills. Tap SCOPE to zoom, SWAP for the knife up close.';
+  document.querySelector('label[for="sens"]').firstChild.textContent = 'LOOK SENSITIVITY ';
+}
 
 /* ---------- cheats (bot matches only; ignored online) ---------- */
 const CHEATS = [
@@ -2340,6 +2402,10 @@ addEventListener('keydown', e => {
   if (e.ctrlKey && e.altKey && e.code === 'KeyO') { e.preventDefault(); e.stopImmediatePropagation(); ownerOpen(); }
 }, true);
 $('ownClose').addEventListener('click', () => { $('ownerPanel').hidden = true; });
+// no keyboard on phones: hold the version line for a second instead
+{ let t = 0; const v = $('ver');
+  v.addEventListener('pointerdown', () => { clearTimeout(t); t = setTimeout(ownerOpen, 900); });
+  for (const ev of ['pointerup','pointercancel','pointerleave']) v.addEventListener(ev, () => clearTimeout(t)); }
 $('ownPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('ownUnlock').click(); });
 $('ownUnlock').addEventListener('click', async () => {
   $('ownMsgOut').textContent = 'Unlocking…';
@@ -2471,7 +2537,7 @@ function syncFighters(t) {
 }
 function resize() {
   const w = cv.clientWidth, h = cv.clientHeight;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touchMode ? 1.5 : 1.75));
   renderer.setSize(w, h, false);
   camera.aspect = vmCam.aspect = w/h; camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
 }
