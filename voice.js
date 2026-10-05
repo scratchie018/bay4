@@ -3,7 +3,7 @@
    through the relay. Each voice plays from where that player stands: louder up close, panned left/right, silent
    past ~30 m and muffled behind walls. Push to talk on V (or the TALK button), or open mic. */
 const VC = { mode:store.get('hr-voice', 'ptt'), vol:+store.get('hr-voice-vol', '1') || 1, ac:null, mic:null, proc:null, src:null, out:null,
-  ptt:false, talking:false, level:0, buf:[], peers:new Map(), err:'', seq:0 };
+  ptt:false, radio:false, talking:false, onRadio:false, level:0, buf:[], peers:new Map(), err:'', seq:0 };
 const VRATE = 12000, VCHUNK = 960;   // 80 ms
 function muEnc(x) { const s = x < 0 ? 0x80 : 0; let m = Math.min(32635, Math.abs(x)*32767) + 132, e = 7; for (let b = 0x4000; e > 0 && !(m & b); b >>= 1) e--; return ~(s | (e << 4) | ((m >> (e + 3)) & 15)) & 255; }
 const MU_DEC = new Float32Array(256);
@@ -23,8 +23,9 @@ async function voiceStart() {
       const d = ev.inputBuffer.getChannelData(0); let pk = 0;
       for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
       VC.level = VC.level*.7 + pk*.3;
-      const send = VC.mode === 'open' ? VC.level > .02 : VC.ptt;
-      VC.talking = send && player && NET.on;
+      // the team radio (G) works in any voice mode and goes to teammates anywhere on the map
+      const send = VC.radio || (VC.mode === 'open' ? VC.level > .02 : VC.ptt);
+      VC.talking = send && player && NET.on; VC.onRadio = VC.radio;
       if (!VC.talking) { VC.buf.length = 0; pos = 0; return; }
       // resample to 12 kHz by averaging each span of input samples
       for (; pos + ratio <= d.length; pos += ratio) { let s = 0, n = 0; for (let j = pos | 0; j < (pos + ratio | 0); j++) { s += d[j]; n++; } VC.buf.push(n ? s/n : 0); }
@@ -33,7 +34,7 @@ async function voiceStart() {
         const chunk = VC.buf.splice(0, VCHUNK), bytes = new Uint8Array(VCHUNK);
         for (let i = 0; i < VCHUNK; i++) bytes[i] = muEnc(Math.max(-1, Math.min(1, chunk[i]*1.4)));
         let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        NET.room.voice(btoa(bin));
+        NET.room.voice(btoa(bin), VC.onRadio);
       }
     };
     const mute = ac.createGain(); mute.gain.value = 0;   // the processor must be connected to run; send it nowhere audible
@@ -60,10 +61,35 @@ function voicePeer(id) {
   p = { lp, pan, out, next:0, heard:0 }; VC.peers.set(id, p);
   return p;
 }
-function voiceIn(id, b64) {
+// radio voices skip the 3D position and go through a walkie-talkie filter
+function radioChain(p) {
+  if (p.radio) return p.radio;
+  const ac = VC.ac, hp = ac.createBiquadFilter(), bp = ac.createBiquadFilter(), sh = ac.createWaveShaper(), g = ac.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 350; bp.type = 'peaking'; bp.frequency.value = 1700; bp.gain.value = 8; bp.Q.value = .8;
+  const c = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i/127.5 - 1; c[i] = Math.tanh(x*2.2)*.85; } sh.curve = c;
+  g.gain.value = VC.vol*.9; hp.connect(bp); bp.connect(sh); sh.connect(g); g.connect(ac.destination);
+  return p.radio = { hp, g, next:0, last:0 };
+}
+function squelch(ac, at, out) {
+  const n = ac.createBufferSource(), len = .09, b = ac.createBuffer(1, ac.sampleRate*len | 0, ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*.35*(1 - i/d.length);
+  n.buffer = b; n.connect(out); n.start(at);
+}
+function voiceIn(id, b64, radio) {
   if (VC.mode === 'off' || typeof b64 !== 'string' || b64.length > 4000) return;
   const e = remoteFor(id); if (!e) return;
+  if (radio && e.team !== player.team) return;
   const p = voicePeer(id), ac = VC.ac; if (ac.state !== 'running') ac.resume();
+  if (radio) {
+    const r = radioChain(p), now = ac.currentTime;
+    let bin; try { bin = atob(b64); } catch (er) { return; }
+    const n = bin.length, buf = ac.createBuffer(1, n, VRATE), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = MU_DEC[bin.charCodeAt(i) & 255];
+    if (r.next < now || r.next > now + .5) { r.next = now + .12; if (now - r.last > .4) squelch(ac, r.next - .06, r.g); }
+    const s = ac.createBufferSource(); s.buffer = buf; s.connect(r.hp); s.start(r.next); r.next += n/VRATE; r.last = now;
+    p.radioHeard = performance.now();
+    return;
+  }
   let bin; try { bin = atob(b64); } catch (er) { return; }
   const n = bin.length, buf = ac.createBuffer(1, n, VRATE), d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = MU_DEC[bin.charCodeAt(i) & 255];
@@ -93,7 +119,11 @@ function voiceHudText() {
   if (!NET.room || !NET.room.voice) return VC.mode === 'off' ? '' : '<span class="k">Voice needs the relay connection</span>';
   if (VC.mode === 'off') return '';
   const now = performance.now(), names = [];
-  for (const [id, p] of VC.peers) if (now - p.heard < 350) { const e = remoteFor(id); if (e) names.push(`<span style="color:${e.color}">🔊 ${escH(e.name)}</span>`); }
-  const me = VC.err ? `<span class="k">${escH(VC.err)}</span>` : VC.talking ? '<b>🎤 TALKING</b>' : `<span class="k">🎤 ${VC.mode === 'open' ? 'open mic' : touchMode ? 'hold TALK' : 'hold V to talk'}</span>`;
+  for (const [id, p] of VC.peers) {
+    const e = remoteFor(id); if (!e) continue;
+    if (now - (p.radioHeard || 0) < 350) names.push(`<span style="color:${e.color}">📻 ${escH(e.name)}</span>`);
+    else if (now - p.heard < 350) names.push(`<span style="color:${e.color}">🔊 ${escH(e.name)}</span>`);
+  }
+  const me = VC.err ? `<span class="k">${escH(VC.err)}</span>` : VC.talking ? (VC.onRadio ? '<b>📻 RADIO</b>' : '<b>🎤 TALKING</b>') : `<span class="k">🎤 ${VC.mode === 'open' ? 'open mic' : touchMode ? 'hold TALK · RADIO' : 'V talk · G team radio'}</span>`;
   return [me, ...names].join('');
 }

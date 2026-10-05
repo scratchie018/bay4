@@ -31,6 +31,14 @@ body{-webkit-touch-callout:none;height:100%;background:var(--ground);color:var(-
 #radar{position:absolute;left:16px;top:14px;width:150px;height:150px;border:1px solid var(--edge);background:rgba(10,11,13,.6);pointer-events:none}
 
 .bl{left:16px;bottom:16px;display:grid;gap:6px;width:min(230px,42vw)}
+#chatLog{left:16px;bottom:118px;display:grid;gap:3px;max-width:min(420px,60vw);font-size:13px;text-shadow:0 1px 2px #000}
+#chatLog>div{background:rgba(10,11,13,.55);padding:2px 8px;width:fit-content;max-width:100%;overflow-wrap:anywhere}
+#chatLog i{color:#6fd36f;font-style:normal;font-weight:700;font-size:11px}
+#chatBar{position:absolute;left:16px;bottom:84px;display:flex;gap:6px;align-items:center;width:min(420px,calc(100% - 32px));z-index:5}
+#chatBar input{flex:1;font:14px var(--body);background:rgba(10,11,13,.85);color:var(--bone);border:1px solid var(--sodium);padding:7px 10px;outline:none}
+#chatTo{appearance:none;font:700 11px var(--body);letter-spacing:.1em;background:var(--bone);color:#141619;border:0;padding:8px 9px;cursor:pointer}
+#chatTo.team{background:#6fd36f}
+@media (max-height:500px){#chatLog{bottom:96px;font-size:12px}#chatBar{bottom:60px}}
 .hpRow{display:flex;align-items:baseline;gap:8px}
 .hpRow b{font-family:var(--display);font-size:40px;line-height:1;font-weight:400}
 .hpRow .plus{font-family:var(--display);font-size:28px;color:var(--steel)}
@@ -244,6 +252,8 @@ tr.me td{color:var(--sodium);font-weight:700}
 
   <div id="hud" hidden>
     <canvas id="radar" width="300" height="300"></canvas>
+    <div class="hud" id="chatLog" hidden></div>
+    <div id="chatBar" hidden><button type="button" id="chatTo">ALL</button><input id="chatIn" maxlength="120" autocomplete="off" enterkeyhint="send" placeholder="Say something (Enter to send, Esc to cancel)"></div>
     <div class="hud bl">
       <div class="hpRow"><span class="plus">+</span><b id="hpN">100</b><span class="lbl">HP</span></div>
       <div class="bar" id="hpBar"><i id="hpB"></i></div>
@@ -286,7 +296,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       <button class="tb sm" id="tReload" type="button">RELOAD</button>
       <button class="tb" id="tCar" type="button" hidden>CAR</button>
     </div>
-    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button><button class="ghost" id="buildBtn" type="button">Build</button><button class="ghost" id="talkBtn" type="button" hidden>Talk</button></div>
+    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button><button class="ghost" id="buildBtn" type="button">Build</button><button class="ghost" id="chatBtn" type="button">Chat</button><button class="ghost" id="talkBtn" type="button" hidden>Talk</button><button class="ghost" id="radioBtn" type="button" hidden>Radio</button></div>
     <div id="rotateHint">Turn your phone sideways for a bigger view</div>
   </div>
 
@@ -294,7 +304,7 @@ tr.me td{color:var(--sodium);font-weight:700}
 
   <div class="overlay" id="menu">
     <div class="plate"><div class="in">
-      <div class="eyebrow">BAY 4 · FREE-FOR-ALL · 8 FIGHTERS</div>
+      <div class="eyebrow">BAY 4 · 2V2 · FFA DUOS</div>
       <h1>Hook &amp; Ring</h1>
       <div class="group"><span class="lbl">MODE</span>
         <div class="modes">
@@ -304,7 +314,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       </div>
       <p class="rule">First to 15 kills wins. If nobody gets there, the most kills when the 3:00 clock runs out takes it.</p>
       <div class="group"><span class="lbl">MATCH</span>
-        <div class="seg" id="teamPick"><button type="button" id="tm-0" data-t="0">Free-for-all</button><button type="button" id="tm-1" data-t="1">1v1</button><button type="button" id="tm-2" data-t="2">2v2</button><button type="button" id="tm-3" data-t="3">3v3</button><button type="button" id="tm-4" data-t="4">4v4</button><button type="button" id="tm-5" data-t="5">5v5</button><button type="button" id="tm-6" data-t="6">6v6</button><button type="button" id="tm-7" data-t="7">7v7</button><button type="button" id="tm-8" data-t="8">8v8</button></div>
+        <div class="seg" id="teamPick"><button type="button" data-m="2v2">2v2</button><button type="button" data-m="duos">FFA Duos</button></div>
         <div class="netstatus" id="teamStatus"></div>
         <div class="seg" id="carPick" style="margin-top:8px"><button type="button" data-c="1">Cars on</button><button type="button" data-c="0">Cars off</button></div>
       </div>
@@ -336,7 +346,8 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div>Reload <kbd>R</kbd></div>
         <div>Crouch <kbd>C</kbd></div>
         <div>Build (1–4, T turn, click) <kbd>B</kbd></div>
-        <div>Talk (online) <kbd>V</kbd></div>
+        <div>Chat / team chat <span><kbd>Enter</kbd><kbd>Y</kbd></span></div>
+        <div>Talk / team radio (online) <span><kbd>V</kbd><kbd>G</kbd></span></div>
         <div>Car in / out <kbd>E</kbd></div>
         <div>Switch seat <kbd>X</kbd></div>
         <div>Car boost / brake <span><kbd>Shift</kbd><kbd>Space</kbd></span></div>
@@ -363,7 +374,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 5 Oct 2026 · 22:30 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 5 Oct 2026 · 23:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -649,10 +660,15 @@ const BUILTIN_MAPS = [{"id":"quarry","name":"Quarry","about":"Open stone quarry.
 
 /* ---------- teams ---------- */
 let TEAM = 0;   // 0 = free-for-all, otherwise players per team
-const TEAMS = [{ name:'Hooks', color:'#e0a040' }, { name:'Rings', color:'#5a9fd6' }];
+const TEAMS = [{ name:'Hooks', color:'#e0a040' }, { name:'Rings', color:'#5a9fd6' }, { name:'Blades', color:'#d65a5a' },
+  { name:'Sparks', color:'#6fbf5a' }, { name:'Ghosts', color:'#a67de0' }, { name:'Rust', color:'#d0864a' }];
+// every match is teams of two: 2v2 (two teams) or FFA Duos (up to six duos, each for itself)
+let DUOS = store.get('hr-match', '2v2') === 'duos';
+const MAXTEAMS = 6;
+const teamIds = () => [...new Set(ents.map(e => e.team))].sort((a, b) => teamScore(b) - teamScore(a) || a - b);
 const BOT_NAMES = ['Vex','Moth','Kestrel','Ozone','Lark','Grit','Saffi','Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'];
 const enemy = (a, b) => !TEAM || a.team !== b.team;
-const teamTarget = () => 10 + 5*(TEAM - 1);
+const teamTarget = () => DUOS ? 12 : 15;
 function teamScore(t) { return ents.filter(e => e.team === t).reduce((s, e) => s + e.kills, 0); }
 function teamShade(t, i) {
   const n = parseInt(TEAMS[t].color.slice(1), 16), k = .78 + (i % 4)*.09;
@@ -1014,7 +1030,8 @@ function mk(name, color, fin, isPlayer) {
 }
 function spawn(e) {
   let pool = SPAWNS;
-  if (TEAM) {
+  const mate = DUOS && ents.find(o => o !== e && o.alive && o.team === e.team);
+  if (TEAM && !DUOS) {
     const tagged = SPAWNS.filter(s => s.team === e.team);
     pool = tagged.length ? tagged : SPAWNS.filter(s => (s.x < W/2) === (e.team === 0));
     if (!pool.length) pool = SPAWNS;
@@ -1024,6 +1041,7 @@ function spawn(e) {
     let m = 1e9;
     for (const o of ents) if (o !== e && o.alive && enemy(e, o)) m = Math.min(m, Math.hypot(o.x-s.x, o.y-s.y));
     m += rand(0, 140);
+    if (mate) m = Math.min(m, 900) - Math.hypot(mate.x - s.x, mate.y - s.y)*.6;   // close to your duo partner, but not next to enemies
     if (m > bd) { bd = m; best = s; }
   }
   if (e.inCar) exitCar(e, true);
@@ -1403,6 +1421,8 @@ function jumpOrDash() {
   else p.wantJump = true;
 }
 addEventListener('keydown', e => {
+  if (CHAT.open) return;
+  if (state === 'play' && (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyY') && !e.repeat) { e.preventDefault(); openChat(e.code === 'KeyY'); return; }
   if (e.code === 'Tab') { e.preventDefault(); if (state === 'play') { $('board').hidden = false; renderBoard($('boardT')); } return; }
   if (e.code === 'Escape') { if (state === 'pause') resume(); else if (state === 'play' && !document.pointerLockElement) pause(); return; }
   if (e.code === 'KeyM') { muted = !muted; return; }
@@ -1415,6 +1435,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyX') { nextSeat(); return; }
   if (e.code === 'KeyB') { toggleBuild(); return; }
   if (e.code === 'KeyV') { VC.ptt = true; return; }
+  if (e.code === 'KeyG') { if (voiceOK() && !VC.radio) sfx('click', .5); VC.radio = true; return; }
   if (BLD.on) { const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code); if (n >= 0) { pickBuild(n); return; } if (e.code === 'KeyT') { BLD.turn++; return; } }
   if (player.inCar && player.seat === 0 && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) { carBoost(); return; }
   if (e.code === 'Space' && player.alive && !player.inCar) player.wantJump = true;
@@ -1425,7 +1446,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ') swapTo(player.weapon === 'awp' ? 'knife' : 'awp');
   if (e.code === 'KeyR') startReload();
 });
-addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'KeyV') VC.ptt = false; if (e.code === 'Tab') $('board').hidden = true; });
+addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'KeyV') VC.ptt = false; if (e.code === 'KeyG') VC.radio = false; if (e.code === 'Tab') $('board').hidden = true; });
 function lookBy(dx, dy) {
   if (!player || !player.alive) return;
   const k = .0022*sens*(camera.fov/AWP.fov[0]);
@@ -1510,8 +1531,18 @@ $('tCar').addEventListener('pointerdown', e => { e.preventDefault(); tryCar(); }
 $('tCrouch').addEventListener('pointerdown', e => { e.preventDefault(); if (keys.has('KeyC')) keys.delete('KeyC'); else keys.add('KeyC'); });
 $('tReload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
 $('buildBtn').addEventListener('click', () => toggleBuild());
+$('chatBtn').addEventListener('click', () => openChat(false));
+$('chatTo').addEventListener('pointerdown', e => { e.preventDefault(); CHAT.team = !CHAT.team; $('chatTo').textContent = CHAT.team ? 'TEAM' : 'ALL'; $('chatTo').classList.toggle('team', CHAT.team); });
+$('chatIn').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeChat(); }
+});
+$('chatIn').addEventListener('blur', () => { if (CHAT.open) setTimeout(() => { if (CHAT.open && document.activeElement !== $('chatIn')) closeChat(); }, 150); });
 $('talkBtn').addEventListener('pointerdown', e => { e.preventDefault(); VC.ptt = true; });
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('talkBtn').addEventListener(ev, () => { VC.ptt = false; });
+$('radioBtn').addEventListener('pointerdown', e => { e.preventDefault(); VC.radio = true; sfx('click', .5); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('radioBtn').addEventListener(ev, () => { VC.radio = false; });
 function syncVoiceUi() { for (const b of $('voicePick').children) b.setAttribute('aria-pressed', b.dataset.v === VC.mode); $('voiceVol').value = VC.vol; }
 for (const b of $('voicePick').children) b.addEventListener('click', () => { VC.mode = b.dataset.v; store.set('hr-voice', VC.mode); syncVoiceUi(); if (VC.mode === 'off') voiceStop(); else if (NET.on) voiceStart(); });
 $('voiceVol').addEventListener('input', () => { VC.vol = +$('voiceVol').value; store.set('hr-voice-vol', String(VC.vol)); });
@@ -1620,7 +1651,7 @@ const escH = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;',
 function renderBoard(host) {
   if (TEAM) {
     const row = (e, i) => `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i+1}</td><td><span class="dot" style="background:${e.color}"></span>${escH(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${e.best}</td></tr>`;
-    host.innerHTML = [0, 1].map(t => `<table><thead><tr><th></th><th style="color:${TEAMS[t].color}">${TEAMS[t].name.toUpperCase()} · ${teamScore(t)}</th><th>K</th><th>D</th><th>BEST STREAK</th></tr></thead><tbody>${standings().filter(e => e.team === t).map(row).join('')}</tbody></table>`).join('');
+    host.innerHTML = teamIds().map(t => `<table><thead><tr><th></th><th style="color:${TEAMS[t].color}">${TEAMS[t].name.toUpperCase()} · ${teamScore(t)}</th><th>K</th><th>D</th><th>BEST STREAK</th></tr></thead><tbody>${standings().filter(e => e.team === t).map(row).join('')}</tbody></table>`).join('');
     return;
   }
   const rows = standings().map((e, i) => `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i+1}</td><td><span class="dot" style="background:${e.isPlayer ? 'var(--sodium)' : e.color}"></span>${escH(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${e.best}</td></tr>`).join('');
@@ -1665,7 +1696,8 @@ function updHud(dt) {
   $('slots').hidden = mode !== 'awp';
   $('s1').classList.toggle('on', player.weapon === 'awp'); $('s3').classList.toggle('on', player.weapon === 'knife');
   const hudV = voiceHudText(); if ($('voiceHud').dataset.v !== hudV) { $('voiceHud').innerHTML = hudV; $('voiceHud').dataset.v = hudV; }
-  $('talkBtn').hidden = !(touchMode && voiceOK() && VC.mode === 'ptt');
+  $('talkBtn').hidden = !(touchMode && voiceOK() && VC.mode === 'ptt'); $('radioBtn').hidden = !(touchMode && voiceOK());
+  if (CHAT.lines.length && !CHAT.open) renderChat();
   const hudB = buildHudText(); if ($('buildHud').dataset.v !== hudB) { $('buildHud').innerHTML = hudB; $('buildHud').dataset.v = hudB; }
   const hudCar = carHudText(); if ($('carHud').dataset.v !== hudCar) { $('carHud').innerHTML = hudCar; $('carHud').dataset.v = hudCar; }
   if (player.inCar && player.seat === 0) {
@@ -1686,7 +1718,8 @@ function updHud(dt) {
   if (NET.on) { $('clock').textContent = `${ents.length} ONLINE`; $('clock').classList.remove('hot'); }
   else { const t = Math.max(0, Math.ceil(matchT)); $('clock').textContent = `${t/60|0}:${String(t%60).padStart(2,'0')}`; $('clock').classList.toggle('hot', t <= 30); }
   const sub = $('hudSub');
-  if (TEAM) { const a = teamScore(0), b = teamScore(1); sub.innerHTML = `<b style="color:${TEAMS[0].color}">${TEAMS[0].name} ${a}</b> &nbsp;–&nbsp; <b style="color:${TEAMS[1].color}">${b} ${TEAMS[1].name}</b> &nbsp;·&nbsp; first to ${teamTarget()} &nbsp;·&nbsp; you're ${TEAMS[player.team].name}`; }
+  if (DUOS) { const ids = teamIds(), top = ids[0]; sub.innerHTML = `Your duo <b style="color:${TEAMS[player.team].color}">${teamScore(player.team)}</b> / ${teamTarget()} &nbsp;·&nbsp; Leader <b style="color:${TEAMS[top].color}">${top === player.team ? 'You' : TEAMS[top].name} ${teamScore(top)}</b>`; }
+  else if (TEAM) { const a = teamScore(0), b = teamScore(1); sub.innerHTML = `<b style="color:${TEAMS[0].color}">${TEAMS[0].name} ${a}</b> &nbsp;–&nbsp; <b style="color:${TEAMS[1].color}">${b} ${TEAMS[1].name}</b> &nbsp;·&nbsp; first to ${teamTarget()} &nbsp;·&nbsp; you're ${TEAMS[player.team].name}`; }
   else { const top = standings()[0]; sub.innerHTML = `You <b>${player.kills}</b> / ${LIMIT} &nbsp;·&nbsp; Leader <b></b>`; sub.querySelectorAll('b')[1].textContent = top.kills ? `${top.isPlayer ? 'You' : top.name} ${top.kills}` : 'none'; }
   $('death').hidden = player.alive;
   if (!player.alive) $('respT').textContent = Math.max(0, player.respawn).toFixed(1);
@@ -1796,14 +1829,17 @@ function startMatch() {
   buildKarambit(finish);
   player = mk('You', TEAM ? TEAMS[0].color : '#ece6da', finish, true);
   ents = [player];
-  if (TEAM) for (let i = 0; i < TEAM*2 - 1; i++) {
+  if (DUOS) for (let i = 0; i < 7; i++) {
+    const t = (i + 1) >> 1, b = mk(BOT_NAMES[i % BOT_NAMES.length], teamShade(t, i), FKEYS[Math.random()*FKEYS.length|0], false);
+    b.team = t; ents.push(b);
+  } else if (TEAM) for (let i = 0; i < TEAM*2 - 1; i++) {
     const t = i < TEAM - 1 ? 0 : 1, b = mk(BOT_NAMES[i % BOT_NAMES.length], teamShade(t, i), FKEYS[Math.random()*FKEYS.length|0], false);
     b.team = t; ents.push(b);
   } else ents.push(...BOTS.map(([n, c]) => mk(n, c, FKEYS[Math.random()*FKEYS.length|0], false)));
   for (const e of ents) { if (!e.isPlayer) buildFighter(e); }
   for (const e of ents) spawn(e);
   setupBuild(); setupCars();
-  matchT = TEAM ? 300 : MATCH; shake = hurt = 0; $('feed').innerHTML = '';
+  matchT = 300; shake = hurt = 0; $('feed').innerHTML = '';
   for (const id of ['menu','end','pause','board']) $(id).hidden = true;
   $('hud').hidden = false; $('touch').hidden = !touchMode;
   $('tFire').textContent = mode === 'awp' ? 'FIRE' : 'SLASH'; $('tAlt').textContent = mode === 'awp' ? 'SCOPE' : 'STAB';
@@ -1835,7 +1871,7 @@ function updTouchLabels() {
 function pause() {
   if (state !== 'play') return;
   renderCheats();
-  touchHandbrake = false; VC.ptt = false;
+  touchHandbrake = false; if (CHAT.open) closeChat(); VC.ptt = VC.radio = false;
   state = 'pause'; $('pause').hidden = false; $('game').classList.remove('playing'); mouse.L = mouse.R = false; keys.clear();
   if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -1855,6 +1891,15 @@ function endMatch(why) {
   const s = standings(), w = s[0], rank = s.indexOf(player)+1;
   $('endWhy').textContent = `${mode === 'awp' ? 'AWP' : 'KARAMBIT'} · ${why.toUpperCase()}`;
   $('endTitle').textContent = w.isPlayer ? 'You take the bay' : `${w.name} takes the bay`;
+  if (DUOS) {
+    const ids = teamIds(), top = ids[0], tie = ids.length > 1 && teamScore(ids[1]) === teamScore(top);
+    $('endTitle').textContent = tie ? 'Draw' : top === player.team ? 'Your duo wins' : `${TEAMS[top].name} win`;
+    $('endLine').textContent = ids.map(t => `${TEAMS[t].name} ${teamScore(t)}`).join(', ') + `. You had ${player.kills} kills and ${player.deaths} deaths.`;
+    renderBoard($('endT'));
+    for (const id of ['touch','board','death','scope','lockHint']) $(id).hidden = true;
+    $('end').hidden = false;
+    return;
+  }
   if (TEAM) {
     const a = teamScore(0), b = teamScore(1), mine = player.team;
     $('endTitle').textContent = a === b ? 'Draw' : `${TEAMS[a > b ? 0 : 1].name} win`;
@@ -1923,16 +1968,16 @@ function applyMapChoice() {
   else if (currentMap.id !== 'bay4') setBay4();
 }
 $('mapSelect').addEventListener('change', e => { mapChoice = e.target.value; store.set('hr-map', mapChoice); syncMapUi(); });
-TEAM = clamp(parseInt(store.get('hr-team', '0')) || 0, 0, 8);
+TEAM = 2;
 function syncTeamUi() {
-  for (const b of $('teamPick').children) b.setAttribute('aria-pressed', +b.dataset.t === TEAM);
-  $('teamStatus').textContent = TEAM ? `${TEAMS[0].name} vs ${TEAMS[1].name}, ${TEAM} a side. Against bots, bots fill both teams. No friendly fire. First team to ${teamTarget()} kills, or the most kills after 5:00.`
-    : 'Everyone for themselves. First to 15 kills, or the most kills after 3:00.';
+  for (const b of $('teamPick').children) b.setAttribute('aria-pressed', (b.dataset.m === 'duos') === DUOS);
+  $('teamStatus').textContent = DUOS ? `Teams of two, every duo for itself. Against bots it's you and a bot partner against three bot duos. First duo to ${teamTarget()} kills, or the most kills after 5:00.`
+    : `${TEAMS[0].name} vs ${TEAMS[1].name}, two a side. Against bots you get a bot teammate. No friendly fire. First team to ${teamTarget()} kills, or the most kills after 5:00.`;
 }
 function syncCarUi() { for (const b of $('carPick').children) b.setAttribute('aria-pressed', (b.dataset.c === '1') === carsOn); }
 for (const b of $('carPick').children) b.addEventListener('click', () => { carsOn = b.dataset.c === '1'; store.set('hr-cars', carsOn ? '1' : '0'); syncCarUi(); });
 queueMicrotask(syncCarUi);
-for (const b of $('teamPick').children) b.addEventListener('click', () => { TEAM = +b.dataset.t; store.set('hr-team', String(TEAM)); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
+for (const b of $('teamPick').children) b.addEventListener('click', () => { DUOS = b.dataset.m === 'duos'; store.set('hr-match', DUOS ? 'duos' : '2v2'); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
 syncTeamUi();
 $('mapLoadBtn').addEventListener('click', () => { $('mapModal').hidden = false; $('mapCodeMsg').textContent = ''; $('mapCode').focus(); });
 $('mapCodeClose').addEventListener('click', () => { $('mapModal').hidden = true; });
@@ -2004,7 +2049,8 @@ $('ch-addbot').addEventListener('click', () => {
   const names = ['Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'], cols = ['#b07d5a','#5a8fb0','#9fb05a','#b05a8f','#5ab0a0','#a05ab0','#b0a55a','#6a6fb0','#b06a6a'];
   const n = ents.length - 8;
   const e = mk(names[(n + names.length) % names.length] + (n >= names.length ? ' ' + (n + 1) : ''), cols[(n + cols.length) % cols.length], FKEYS[Math.random()*FKEYS.length|0], false);
-  if (TEAM) { e.team = ents.filter(x => x.team === 0).length > ents.filter(x => x.team === 1).length ? 1 : 0; e.color = teamShade(e.team, ents.length); }
+  if (DUOS) { const c = new Map(); for (const x of ents) c.set(x.team, (c.get(x.team) || 0) + 1); let t = [...c].find(([, n]) => n < 2)?.[0]; if (t === undefined) t = [...Array(MAXTEAMS).keys()].find(i => !c.has(i)) ?? 0; e.team = t; e.color = teamShade(t, ents.length); }
+  else if (TEAM) { e.team = ents.filter(x => x.team === 0).length > ents.filter(x => x.team === 1).length ? 1 : 0; e.color = teamShade(e.team, ents.length); }
   ents.push(e); buildFighter(e); spawn(e); applyCheatVisuals();
 });
 $('ch-kills').addEventListener('click', () => { if (NET.on || !player) return; player.kills += 5; player.streak += 5; player.best = Math.max(player.best, player.streak); if (player.kills >= LIMIT) { resume(); endMatch(`You reached ${LIMIT} kills`); } });
@@ -2048,7 +2094,7 @@ $('nick').addEventListener('change', () => { NET.nick = cleanText($('nick').valu
 $('roomCode').addEventListener('change', () => { NET.code = cleanCode($('roomCode').value); $('roomCode').value = NET.code; store.set('hr-room', NET.code); updateNetStatus(); });
 $('startOnline').addEventListener('click', () => { $('nick').dispatchEvent(new Event('change')); $('roomCode').dispatchEvent(new Event('change')); sfx('dash'); startOnline(); });
 
-function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode && (pr.ty | 0) === TEAM && (pr.cx ? 1 : 0) === (NET.cheatsRoom ? 1 : 0) && (pr.mp || 'bay4') === currentMap.id && (pr.vh ? 1 : 0) === (carsOn ? 1 : 0); }
+function inMatch(pr) { return pr && pr.hr === 1 && pr.rm === NET.code && pr.md === mode && (pr.ty | 0) === TEAM && (pr.du ? 1 : 0) === (DUOS ? 1 : 0) && (pr.cx ? 1 : 0) === (NET.cheatsRoom ? 1 : 0) && (pr.mp || 'bay4') === currentMap.id && (pr.vh ? 1 : 0) === (carsOn ? 1 : 0); }
 function updateNetStatus() {
   const el = $('netStatus'), btn = $('startOnline');
   if (!window.Peer) { el.textContent = 'Online play could not load. Check your connection and reload the page.'; btn.disabled = true; return; }
@@ -2089,7 +2135,7 @@ function makeRelayRoom(roomId) {
       else if (m.t === 'host') host = m.id;
       else if (m.t === 'getmap') serveMap(m.from);
       else if (m.t === 'map') for (const w of mapWaiters) w(m.d);
-      else if (m.t === 'v' && typeof m.d === 'string') for (const f of voiceFns) f(m.id, m.d);
+      else if (m.t === 'v' && typeof m.d === 'string') for (const f of voiceFns) f(m.id, m.d, !!m.r);
     };
     ws.onerror = () => { if (!me) { clearTimeout(t); reject(new Error('relay unreachable')); } };
     ws.onclose = () => { if (me && !closed) { NET.netError = 'Lost the connection to the relay.'; if (NET.on) toMenu(); else leaveOnline(); updateNetStatus(); } };
@@ -2116,7 +2162,7 @@ function makeRelayRoom(roomId) {
       },
       leave() { closed = true; try { ws.close(); } catch (e) {} },
       isHost:() => host === me,
-      voice(d) { send({ t:'v', d }); },
+      voice(d, radio) { send(radio ? { t:'v', d, r:1 } : { t:'v', d }); },
       onVoice(fn) { voiceFns.add(fn); },
       fetchMap(onProgress) {
         return new Promise((res, rej) => {
@@ -2274,10 +2320,10 @@ async function startOnline() {
     } catch (e) {}
   }
   try {
-    const rid = `hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}${carsOn ? '' : '-nc'}-${NET.code}`;
+    const rid = `hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${DUOS ? '-duo' : '-t' + TEAM}${carsOn ? '' : '-nc'}-${NET.code}`;
     let viaRelay = null;
     if (RELAY_WS) { try { viaRelay = await makeRelayRoom(rid); } catch (e) { viaRelay = null; } }
-    const room = viaRelay || await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${TEAM ? '-t' + TEAM : ''}${carsOn ? '' : '-nc'}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    const room = viaRelay || await Promise.race([makePeerRoom(`hookring-${mode}${NET.cheatsRoom ? '-cx' : ''}${DUOS ? '-duo' : '-t' + TEAM}${carsOn ? '' : '-nc'}-${NET.code}`), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
     NET.room = room;
     NET.onMigrate = id => { NET.myPeer = id; };
     room.onPeers(ch => { for (const p of ch.peers) if (p.sameTab) NET.myPeer = p.peer; if (NET.on) readPeers(ch); });
@@ -2309,13 +2355,15 @@ async function startOnline() {
 }
 function beginOnlineMatch() {
   startMatch();
-  NET.on = true; NET.hits = []; NET.ce = []; NET.be = []; NET.died = null; NET.shot = null; NET.round = 0; NET.roundEnd = 0; NET.seen.clear();
+  NET.on = true; NET.hits = []; NET.ce = []; NET.be = []; NET.chat = []; NET.died = null; NET.shot = null; NET.round = 0; NET.roundEnd = 0; NET.seen.clear();
   player.name = 'You'; player.color = NET.color;
   clearFighters(); ents = [player];
   if (TEAM) {
-    // join the team with fewer players
-    const cnt = [0, 0]; for (const q of NET.room.peers()) if (!q.sameTab && inMatch(q.presence)) cnt[q.presence.tm === 1 ? 1 : 0]++;
-    player.team = cnt[0] <= cnt[1] ? 0 : 1; player.color = TEAMS[player.team].color;
+    // 2v2: join the team with fewer players. Duos: pair up with someone alone, else start a new duo.
+    const cnt = Array(MAXTEAMS).fill(0); for (const q of NET.room.peers()) if (!q.sameTab && inMatch(q.presence)) cnt[clamp(q.presence.tm | 0, 0, MAXTEAMS - 1)]++;
+    if (DUOS) { let t = cnt.findIndex(n => n === 1); if (t < 0) t = cnt.findIndex(n => n === 0); if (t < 0) t = cnt.indexOf(Math.min(...cnt)); player.team = t; }
+    else player.team = cnt[0] <= cnt[1] ? 0 : 1;
+    player.color = TEAMS[player.team].color;
   }
   for (const p of NET.room.peers()) if (!p.sameTab && inMatch(p.presence)) NET.round = Math.max(NET.round, p.presence.r | 0);
   readPeers({ peers:NET.room.peers(), left:[] });
@@ -2323,7 +2371,7 @@ function beginOnlineMatch() {
   $('feed').innerHTML = '';
   if (NET.room.onVoice) NET.room.onVoice(voiceIn);
   voiceStart();
-  callout(NET.cheatsRoom ? 'CHEATS ROOM' : NET.room.isHost() ? 'HOSTING' : 'ONLINE', `ROOM ${NET.code.toUpperCase()} · FIRST TO ${LIMIT}`);
+  callout(NET.cheatsRoom ? 'CHEATS ROOM' : NET.room.isHost() ? 'HOSTING' : 'ONLINE', `ROOM ${NET.code.toUpperCase()} · FIRST TO ${teamTarget()}`);
   applyCheatVisuals();
 }
 function leaveOnline() {
@@ -2352,9 +2400,9 @@ function readPeers(ch) {
     if (!e) {
       const col = /^#[0-9a-f]{6}$/i.test(pr.c) ? pr.c : '#9aa4ad';
       e = mk(cleanText(pr.n, 14) || 'Player', col, FINISHES[pr.f] ? pr.f : 'fade', false);
-      Object.assign(e, { remote:true, peer:p.peer, team:pr.tm === 1 ? 1 : 0, snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
+      Object.assign(e, { remote:true, peer:p.peer, team:clamp(pr.tm | 0, 0, MAXTEAMS - 1), snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
       // ignore anything this player did before we arrived
-      NET.seen.set(p.peer, { be:Math.max(0, ...(Array.isArray(pr.be) ? pr.be.map(h => +(h && h.q) || 0) : [0])), ce:Math.max(0, ...(Array.isArray(pr.ce) ? pr.ce.map(h => +(h && h.q) || 0) : [0])), hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
+      NET.seen.set(p.peer, { ch:Math.max(0, ...(Array.isArray(pr.chat) ? pr.chat.map(h => +(h && h.q) || 0) : [0])), be:Math.max(0, ...(Array.isArray(pr.be) ? pr.be.map(h => +(h && h.q) || 0) : [0])), ce:Math.max(0, ...(Array.isArray(pr.ce) ? pr.ce.map(h => +(h && h.q) || 0) : [0])), hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
       buildFighter(e); ents.push(e); applyCheatVisuals();
     }
     if (p.updatedAt === e.lastUpd) continue;
@@ -2368,7 +2416,7 @@ function readPeers(ch) {
     e.hp = clamp(num(pr.hp, 100), 0, 100); e.zoom = num(pr.z) | 0;
     e.kills = (pr.r | 0) === NET.round ? clamp(num(pr.k) | 0, 0, 999) : 0;
     e.deaths = (pr.r | 0) === NET.round ? clamp(num(pr.d) | 0, 0, 999) : 0;
-    e.team = pr.tm === 1 ? 1 : 0; e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0; e.crouchAmt = clamp(num(pr.cr), 0, 1);
+    e.team = clamp(pr.tm | 0, 0, MAXTEAMS - 1); e.dashing = !!pr.ds; e.prot = pr.pt ? 1 : 0; e.crouchAmt = clamp(num(pr.cr), 0, 1);
     if ((pr.r | 0) > NET.round) newRound(pr.r | 0);
     const w = pr.w === 'awp' ? 'awp' : 'knife';
     if (w !== e.weapon) { e.weapon = w; dropRemote(e); e.gone = false; buildFighter(e); applyCheatVisuals(); }
@@ -2376,7 +2424,7 @@ function readPeers(ch) {
     if (alive && !e.alive) { e.alive = true; e.deadT = 0; e.snaps = e.snaps.slice(-1); if (e.mesh) { e.mesh.g.visible = true; e.mesh.g.rotation.set(0, 0, 0); e.mesh.g.position.y = 0; } }
     if (!alive && e.alive) { e.alive = false; e.deadT = 0; }
     const seen = NET.seen.get(p.peer);
-    readCarNet(p, pr, e, seen); readBuildNet(p, pr, e, seen);
+    readCarNet(p, pr, e, seen); readBuildNet(p, pr, e, seen); readChatNet(p, pr, e, seen);
     const dist = Math.hypot(e.x - player.x, e.y - player.y), vol = clamp(1 - dist/1400, .08, .9);
     // swing started
     if (pr.sw && +pr.sw.q > seen.sw) { seen.sw = +pr.sw.q; e.swing = { type:pr.sw.t === 'stab' ? 'stab' : 'slash', t:0, hit:new Set(), side:pr.sw.s < 0 ? -1 : 1 }; sfx(e.swing.type, vol); }
@@ -2442,15 +2490,15 @@ function newRound(r) {
   player.kills = player.deaths = player.streak = player.best = 0;
   for (const e of ents) if (e.remote) e.kills = e.deaths = 0;
   $('feed').innerHTML = ''; $('board').hidden = true;
-  callout(`ROUND ${r + 1}`, `FIRST TO ${LIMIT}`);
+  callout(`ROUND ${r + 1}`, `FIRST TO ${teamTarget()}`);
 }
 function netFrame() {
   if (OWN.priv && NET.myPeer && OWN.badgeFor !== `badge|${NET.myPeer}|${NET.nick}`) ownerPresence();
   const p = player, now = performance.now();
   // someone reached the limit: show the board, then everyone starts the next round together
   if (!NET.roundEnd) {
-    const wt = TEAM ? [0, 1].find(t => teamScore(t) >= teamTarget()) : undefined;
-    if (wt !== undefined) { NET.roundEnd = now + 8000; callout(`${TEAMS[wt].name.toUpperCase()} WIN`, `${wt === player.team ? 'YOUR TEAM' : 'THE OTHER TEAM'} · NEXT ROUND IN 8 S`); $('board').hidden = false; renderBoard($('boardT')); }
+    const wt = TEAM ? teamIds().find(t => teamScore(t) >= teamTarget()) : undefined;
+    if (wt !== undefined) { NET.roundEnd = now + 8000; callout(`${TEAMS[wt].name.toUpperCase()} WIN`, `${wt === player.team ? (DUOS ? 'YOUR DUO' : 'YOUR TEAM') : DUOS ? 'ANOTHER DUO' : 'THE OTHER TEAM'} · NEXT ROUND IN 8 S`); $('board').hidden = false; renderBoard($('boardT')); }
     const w = TEAM ? null : ents.find(e => e.kills >= LIMIT);
     if (w) { NET.roundEnd = now + 8000; callout(w.isPlayer ? 'YOU WIN' : `${w.name.toUpperCase()} WINS`, `ROUND ${NET.round + 1} · NEXT ROUND IN 8 S`); $('board').hidden = false; renderBoard($('boardT')); }
   } else if (now > NET.roundEnd) newRound(NET.round + 1);
@@ -2460,11 +2508,11 @@ function netFrame() {
   NET.lastSent = now;
   const r2 = v => Math.round(v*100)/100;
   NET.room.presence({
-    hr:1, rm:NET.code, md:mode, ty:TEAM, tm:p.team, mp:currentMap.id, mn:currentMap.name, cx:NET.cheatsRoom ? 1 : 0, cr:Math.round((p.crouchAmt || 0)*10)/10, st:'play', n:NET.nick, c:TEAM ? TEAMS[p.team].color : NET.color, f:finish, w:p.weapon,
+    hr:1, rm:NET.code, md:mode, ty:TEAM, du:DUOS ? 1 : 0, tm:p.team, mp:currentMap.id, mn:currentMap.name, cx:NET.cheatsRoom ? 1 : 0, cr:Math.round((p.crouchAmt || 0)*10)/10, st:'play', n:NET.nick, c:TEAM ? TEAMS[p.team].color : NET.color, f:finish, w:p.weapon,
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
-    vh:carsOn ? 1 : 0, vc:p.inCar ? [p.inCar.i, p.seat] : null, vs:carNetState(), ce:NET.ce, bd:buildNetState(), be:NET.be,
+    vh:carsOn ? 1 : 0, vc:p.inCar ? [p.inCar.i, p.seat] : null, vs:carNetState(), ce:NET.ce, bd:buildNetState(), be:NET.be, chat:NET.chat,
     k:p.kills, d:p.deaths, r:NET.round, hits:NET.hits, died:NET.died, shot:NET.shot, ob:OWN.priv ? OWN.badge : null, oc:OWN.cmd,
   }).catch(() => {});
 }
@@ -3291,7 +3339,7 @@ function buildHudText() {
    through the relay. Each voice plays from where that player stands: louder up close, panned left/right, silent
    past ~30 m and muffled behind walls. Push to talk on V (or the TALK button), or open mic. */
 const VC = { mode:store.get('hr-voice', 'ptt'), vol:+store.get('hr-voice-vol', '1') || 1, ac:null, mic:null, proc:null, src:null, out:null,
-  ptt:false, talking:false, level:0, buf:[], peers:new Map(), err:'', seq:0 };
+  ptt:false, radio:false, talking:false, onRadio:false, level:0, buf:[], peers:new Map(), err:'', seq:0 };
 const VRATE = 12000, VCHUNK = 960;   // 80 ms
 function muEnc(x) { const s = x < 0 ? 0x80 : 0; let m = Math.min(32635, Math.abs(x)*32767) + 132, e = 7; for (let b = 0x4000; e > 0 && !(m & b); b >>= 1) e--; return ~(s | (e << 4) | ((m >> (e + 3)) & 15)) & 255; }
 const MU_DEC = new Float32Array(256);
@@ -3311,8 +3359,9 @@ async function voiceStart() {
       const d = ev.inputBuffer.getChannelData(0); let pk = 0;
       for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
       VC.level = VC.level*.7 + pk*.3;
-      const send = VC.mode === 'open' ? VC.level > .02 : VC.ptt;
-      VC.talking = send && player && NET.on;
+      // the team radio (G) works in any voice mode and goes to teammates anywhere on the map
+      const send = VC.radio || (VC.mode === 'open' ? VC.level > .02 : VC.ptt);
+      VC.talking = send && player && NET.on; VC.onRadio = VC.radio;
       if (!VC.talking) { VC.buf.length = 0; pos = 0; return; }
       // resample to 12 kHz by averaging each span of input samples
       for (; pos + ratio <= d.length; pos += ratio) { let s = 0, n = 0; for (let j = pos | 0; j < (pos + ratio | 0); j++) { s += d[j]; n++; } VC.buf.push(n ? s/n : 0); }
@@ -3321,7 +3370,7 @@ async function voiceStart() {
         const chunk = VC.buf.splice(0, VCHUNK), bytes = new Uint8Array(VCHUNK);
         for (let i = 0; i < VCHUNK; i++) bytes[i] = muEnc(Math.max(-1, Math.min(1, chunk[i]*1.4)));
         let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        NET.room.voice(btoa(bin));
+        NET.room.voice(btoa(bin), VC.onRadio);
       }
     };
     const mute = ac.createGain(); mute.gain.value = 0;   // the processor must be connected to run; send it nowhere audible
@@ -3348,10 +3397,35 @@ function voicePeer(id) {
   p = { lp, pan, out, next:0, heard:0 }; VC.peers.set(id, p);
   return p;
 }
-function voiceIn(id, b64) {
+// radio voices skip the 3D position and go through a walkie-talkie filter
+function radioChain(p) {
+  if (p.radio) return p.radio;
+  const ac = VC.ac, hp = ac.createBiquadFilter(), bp = ac.createBiquadFilter(), sh = ac.createWaveShaper(), g = ac.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 350; bp.type = 'peaking'; bp.frequency.value = 1700; bp.gain.value = 8; bp.Q.value = .8;
+  const c = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i/127.5 - 1; c[i] = Math.tanh(x*2.2)*.85; } sh.curve = c;
+  g.gain.value = VC.vol*.9; hp.connect(bp); bp.connect(sh); sh.connect(g); g.connect(ac.destination);
+  return p.radio = { hp, g, next:0, last:0 };
+}
+function squelch(ac, at, out) {
+  const n = ac.createBufferSource(), len = .09, b = ac.createBuffer(1, ac.sampleRate*len | 0, ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*.35*(1 - i/d.length);
+  n.buffer = b; n.connect(out); n.start(at);
+}
+function voiceIn(id, b64, radio) {
   if (VC.mode === 'off' || typeof b64 !== 'string' || b64.length > 4000) return;
   const e = remoteFor(id); if (!e) return;
+  if (radio && e.team !== player.team) return;
   const p = voicePeer(id), ac = VC.ac; if (ac.state !== 'running') ac.resume();
+  if (radio) {
+    const r = radioChain(p), now = ac.currentTime;
+    let bin; try { bin = atob(b64); } catch (er) { return; }
+    const n = bin.length, buf = ac.createBuffer(1, n, VRATE), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = MU_DEC[bin.charCodeAt(i) & 255];
+    if (r.next < now || r.next > now + .5) { r.next = now + .12; if (now - r.last > .4) squelch(ac, r.next - .06, r.g); }
+    const s = ac.createBufferSource(); s.buffer = buf; s.connect(r.hp); s.start(r.next); r.next += n/VRATE; r.last = now;
+    p.radioHeard = performance.now();
+    return;
+  }
   let bin; try { bin = atob(b64); } catch (er) { return; }
   const n = bin.length, buf = ac.createBuffer(1, n, VRATE), d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = MU_DEC[bin.charCodeAt(i) & 255];
@@ -3381,9 +3455,56 @@ function voiceHudText() {
   if (!NET.room || !NET.room.voice) return VC.mode === 'off' ? '' : '<span class="k">Voice needs the relay connection</span>';
   if (VC.mode === 'off') return '';
   const now = performance.now(), names = [];
-  for (const [id, p] of VC.peers) if (now - p.heard < 350) { const e = remoteFor(id); if (e) names.push(`<span style="color:${e.color}">🔊 ${escH(e.name)}</span>`); }
-  const me = VC.err ? `<span class="k">${escH(VC.err)}</span>` : VC.talking ? '<b>🎤 TALKING</b>' : `<span class="k">🎤 ${VC.mode === 'open' ? 'open mic' : touchMode ? 'hold TALK' : 'hold V to talk'}</span>`;
+  for (const [id, p] of VC.peers) {
+    const e = remoteFor(id); if (!e) continue;
+    if (now - (p.radioHeard || 0) < 350) names.push(`<span style="color:${e.color}">📻 ${escH(e.name)}</span>`);
+    else if (now - p.heard < 350) names.push(`<span style="color:${e.color}">🔊 ${escH(e.name)}</span>`);
+  }
+  const me = VC.err ? `<span class="k">${escH(VC.err)}</span>` : VC.talking ? (VC.onRadio ? '<b>📻 RADIO</b>' : '<b>🎤 TALKING</b>') : `<span class="k">🎤 ${VC.mode === 'open' ? 'open mic' : touchMode ? 'hold TALK · RADIO' : 'V talk · G team radio'}</span>`;
   return [me, ...names].join('');
+}
+
+/* ---------- text chat ----------
+   Enter talks to everyone, Y to your team only. Online, messages ride along in presence (`chat`, last 5). */
+const CHAT = { open:false, team:false, lines:[], last:0, out:[] };
+function chatLine(name, color, text, team) {
+  CHAT.lines.push({ name, color, text, team, t:performance.now() });
+  if (CHAT.lines.length > 30) CHAT.lines.shift();
+  renderChat();
+}
+function renderChat() {
+  const box = $('chatLog'), now = performance.now(), show = CHAT.lines.filter(l => CHAT.open || now - l.t < 10000).slice(-7);
+  box.replaceChildren(...show.map(l => {
+    const d = document.createElement('div'), n = document.createElement('b'), tx = document.createElement('span');
+    if (l.team) { const tg = document.createElement('i'); tg.textContent = '[TEAM] '; d.append(tg); }
+    n.textContent = l.name + ': '; n.style.color = l.color; tx.textContent = l.text; d.append(n, tx);
+    d.style.opacity = CHAT.open ? 1 : clamp((10000 - (now - l.t))/1500, 0, 1);
+    return d;
+  }));
+  box.hidden = !show.length;
+}
+function openChat(team) {
+  if (state !== 'play' || !player) return;
+  CHAT.open = true; CHAT.team = team; keys.clear(); mouse.L = mouse.R = false;
+  $('chatBar').hidden = false; $('chatTo').textContent = team ? 'TEAM' : 'ALL'; $('chatTo').classList.toggle('team', team);
+  $('chatIn').value = ''; $('chatIn').focus(); renderChat();
+}
+function closeChat() { CHAT.open = false; $('chatBar').hidden = true; $('chatIn').blur(); renderChat(); }
+function sendChat() {
+  const text = cleanText($('chatIn').value, 120);
+  closeChat();
+  if (!text || performance.now() - CHAT.last < 300) return;
+  CHAT.last = performance.now();
+  chatLine(NET.on ? NET.nick || 'You' : 'You', TEAMS[player.team] ? TEAMS[player.team].color : '#ece6da', text, CHAT.team);
+  if (NET.on) { NET.chat.push({ q:++NET.seq, t:text, tm:CHAT.team ? 1 : 0 }); if (NET.chat.length > 5) NET.chat.shift(); }
+}
+function readChatNet(p, pr, e, seen) {
+  if (!Array.isArray(pr.chat)) return;
+  for (const m of pr.chat.slice(-5)) {
+    const q = +(m && m.q) || 0; if (q <= seen.ch) continue; seen.ch = q;
+    if (m.tm && e.team !== player.team) continue;
+    const text = cleanText(m.t, 120); if (text) { chatLine(e.name, e.color, text, !!m.tm); sfx('click', .35); }
+  }
 }
 
 function update(dt) {
