@@ -9,7 +9,7 @@
 //                    {t:'p', id, p}  {t:'left', id}  {t:'host', id}
 //                    {t:'getmap', from:id}  {t:'map', d:{...}}  {t:'v', id, d}
 const ALLOWED = ['https://scratchie018.github.io', 'http://127.0.0.1', 'http://localhost'];
-const MAX_PLAYERS = 20, MAX_MSG = 16384, MAX_RATE = 40;   // messages per second per player
+const MAX_PLAYERS = 20, MAX_MSG = 16384, MAX_RATE = 90;   // messages per second per player (map downloads send ~40/s)
 
 export default {
   async fetch(req, env) {

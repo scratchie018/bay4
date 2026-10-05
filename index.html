@@ -314,14 +314,14 @@ tr.me td{color:var(--sodium);font-weight:700}
       </div>
       <p class="rule">First to 15 kills wins. If nobody gets there, the most kills when the 3:00 clock runs out takes it.</p>
       <div class="group"><span class="lbl">MATCH</span>
-        <div class="seg" id="teamPick"><button type="button" data-m="2">2v2</button><button type="button" data-m="3">3v3</button><button type="button" data-m="4">4v4</button><button type="button" data-m="5">5v5</button><button type="button" data-m="6">6v6</button><button type="button" data-m="7">7v7</button><button type="button" data-m="8">8v8</button><button type="button" data-m="duos">FFA Duos</button></div>
+        <div class="seg" id="teamPick"><button type="button" data-m="1">1v1 (debug)</button><button type="button" data-m="2">2v2</button><button type="button" data-m="3">3v3</button><button type="button" data-m="4">4v4</button><button type="button" data-m="5">5v5</button><button type="button" data-m="6">6v6</button><button type="button" data-m="7">7v7</button><button type="button" data-m="8">8v8</button><button type="button" data-m="duos">FFA Duos</button></div>
         <div class="netstatus" id="teamStatus"></div>
         <div class="seg" id="carPick" style="margin-top:8px"><button type="button" data-c="1">Cars on</button><button type="button" data-c="0">Cars off</button></div>
       </div>
       <div class="group"><span class="lbl">MAP</span>
         <div class="row">
           <select id="mapSelect" aria-label="Map"></select>
-          <button class="ghost" type="button" id="mapLoadBtn">Load map code</button>
+          <button class="ghost" type="button" id="mapLoadBtn">Load map (.glb)</button><input type="file" id="mapFile" accept=".glb,model/gltf-binary,.json,.txt" hidden>
         </div>
         <div class="netstatus" id="mapStatus"></div>
       </div>
@@ -374,7 +374,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 00:15 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 6 Oct 2026 · 01:00 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -812,24 +812,25 @@ function voxelBoxes(tris, cell = .25) {
     const cols = new Map(); let samples = 0, tooMany = false;
     for (let t = 0; t + 8 < tris.length && !tooMany; t += 9) {
       const ax = tris[t], ay = tris[t+1], az = tris[t+2], bx = tris[t+3] - ax, by = tris[t+4] - ay, bz = tris[t+5] - az, cx = tris[t+6] - ax, cy = tris[t+7] - ay, cz = tris[t+8] - az;
-      const L = Math.max(Math.hypot(bx, by, bz), Math.hypot(cx, cy, cz), Math.hypot(bx - cx, by - cy, bz - cz));
-      const n = Math.max(1, Math.ceil(L/(cell*.5)));
-      samples += n*n/2; if (samples > 4e6) { tooMany = true; break; }
-      for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) {
-        const u = i/n, w = j/n, x = ax + bx*u + cx*w, y = ay + by*u + cy*w, z = az + bz*u + cz*w;
-        const k = Math.floor(x/cell) + ',' + Math.floor(z/cell);
-        let s = cols.get(k); if (!s) cols.set(k, s = new Set());
-        s.add(Math.floor(y/cell));
+      // sample along each edge separately, so long thin triangles (common in Blender exports) stay cheap
+      const nb = Math.max(1, Math.ceil(Math.hypot(bx, by, bz)/(cell*.5))), nc = Math.max(1, Math.ceil(Math.hypot(cx, cy, cz)/(cell*.5)));
+      samples += nb*nc/2 + nb + nc; if (samples > 6e6) { tooMany = true; break; }
+      for (let i = 0; i <= nb; i++) for (let j = 0, jm = Math.floor(nc*(1 - i/nb) + 1e-9); j <= jm; j++) {
+        const u = i/nb, w = j/nc, x = ax + bx*u + cx*w, y = ay + by*u + cy*w, z = az + bz*u + cz*w;
+        const k = Math.floor(x/cell) + ',' + Math.floor(z/cell), iy = Math.floor(y/cell);
+        let s = cols.get(k); if (!s) cols.set(k, s = new Map());
+        const r = s.get(iy); if (!r) s.set(iy, [y, y]); else { if (y < r[0]) r[0] = y; if (y > r[1]) r[1] = y; }
       }
     }
     if (tooMany) continue;
     // column -> its filled height runs, as a string so identical columns can be merged
     const rows = new Map();
     for (const [k, ys] of cols) {
-      const [ix, iz] = k.split(',').map(Number), a = [...ys].sort((p, q) => p - q), runs = [];
-      for (const y of a) { const r = runs[runs.length - 1]; if (r && y === r[1] + 1) r[1] = y; else runs.push([y, y]); }
+      const [ix, iz] = k.split(',').map(Number), a = [...ys.keys()].sort((p, q) => p - q), runs = [];
+      // each run: grid cells [from, to] and the real surface heights [lo, hi] inside them
+      for (const y of a) { const r = runs[runs.length - 1], [lo, hi] = ys.get(y); if (r && y === r[1] + 1) { r[1] = y; r[3] = Math.max(r[3], hi); } else runs.push([y, y, lo, hi]); }
       if (!rows.has(iz)) rows.set(iz, []);
-      rows.get(iz).push({ ix, key:runs.map(r => r.join('-')).join(';'), runs });
+      rows.get(iz).push({ ix, key:runs.map(r => r[0] + '-' + r[1]).join(';'), runs });
     }
     // strips along x, then stack identical strips along z
     const strips = new Map();   // "ix0,ix1,key" -> list of iz
@@ -838,8 +839,10 @@ function voxelBoxes(tris, cell = .25) {
       for (let i = 0; i < list.length;) {
         let j = i; while (j + 1 < list.length && list[j + 1].ix === list[j].ix + 1 && list[j + 1].key === list[i].key) j++;
         const sk = list[i].ix + ',' + list[j].ix + ',' + list[i].key;
-        if (!strips.has(sk)) strips.set(sk, { ix0:list[i].ix, ix1:list[j].ix, runs:list[i].runs, zs:[] });
-        strips.get(sk).zs.push(iz); i = j + 1;
+        if (!strips.has(sk)) strips.set(sk, { ix0:list[i].ix, ix1:list[j].ix, runs:list[i].runs.map(r => [...r]), zs:[] });
+        const st = strips.get(sk);
+        for (let c = i; c <= j; c++) list[c].runs.forEach((r, n) => { st.runs[n][2] = Math.min(st.runs[n][2], r[2]); st.runs[n][3] = Math.max(st.runs[n][3], r[3]); });
+        st.zs.push(iz); i = j + 1;
       }
     }
     const out = [];
@@ -847,16 +850,77 @@ function voxelBoxes(tris, cell = .25) {
       st.zs.sort((p, q) => p - q);
       for (let i = 0; i < st.zs.length;) {
         let j = i; while (j + 1 < st.zs.length && st.zs[j + 1] === st.zs[j] + 1) j++;
-        for (const [y0, y1] of st.runs) out.push({ x0:st.ix0*cell, x1:(st.ix1 + 1)*cell, z0:st.zs[i]*cell, z1:(st.zs[j] + 1)*cell, y0:y0*cell, y1:(y1 + 1)*cell });
+        for (const r of st.runs) out.push({ x0:st.ix0*cell, x1:(st.ix1 + 1)*cell, z0:st.zs[i]*cell, z1:(st.zs[j] + 1)*cell, y0:r[2], y1:r[3] });
         i = j + 1;
       }
     }
     if (out.length <= 2500 || tries === 2) return out;
   }
-  return [];
+  // far too detailed even at 1 m: fall back to the bounding box rather than no collision at all
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (let i = 0; i + 2 < tris.length; i += 3) { x0 = Math.min(x0, tris[i]); x1 = Math.max(x1, tris[i]); y0 = Math.min(y0, tris[i+1]); y1 = Math.max(y1, tris[i+1]); z0 = Math.min(z0, tris[i+2]); z1 = Math.max(z1, tris[i+2]); }
+  return x1 > x0 ? [{ x0, x1, y0, y1, z0, z1 }] : [];
 }
 // does this solid need real-shape colliders, or is a plain box exact?
 const needsShape = o => o.shape === 'model' || o.shape === 'cyl' || o.shape === 'wedge' || Math.abs(Math.sin(2*(o.rotY || 0))) > 1e-3;
+/* ---------- maps straight from Blender ----------
+   A .glb becomes the whole map at real scale, colliding by its real shape. Empties (or objects) named spawn_a / spawn_b
+   become team spawns (plain "spawn" works for anyone). Blender lights come along. Saved in IndexedDB (too big for
+   localStorage) and sent to everyone who joins an online room like any custom map. */
+const mapDB = (() => {
+  let dbp = null;
+  const db = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open('hookring', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = (mode, fn) => db().then(d => new Promise((res, rej) => { const t = d.transaction('kv', mode), q = fn(t.objectStore('kv')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { get:k => tx('readonly', s => s.get(k)).catch(() => null), set:(k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null) };
+})();
+function b64OfBuffer(buf) {
+  const u = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function mapFromGlb(buf, fileName) {
+  if (!gltfLoader) throw new Error('The model loader did not load.');
+  const g = await new Promise((res, rej) => gltfLoader.parse(buf, '', res, rej));
+  const root = g.scene || g.scenes[0]; root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  root.traverse(o => { if (o.isMesh && !/spawn/i.test(o.name)) box.expandByObject(o); });
+  if (box.isEmpty()) throw new Error('That model has no meshes in it.');
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const w = clamp(Math.ceil(size.x + 2), 10, 400), d = clamp(Math.ceil(size.z + 2), 10, 400);
+  const objects = [{ id:'map', name:'Map', kind:'solid', shape:'model', model:'mdl-map', pos:[w/2, 0, d/2], size:[size.x, size.y, size.z].map(v => Math.max(v, .01)), rotY:0 }];
+  const wp = new THREE.Vector3();
+  root.traverse(o => {
+    if (!/spawn/i.test(o.name)) return;
+    o.getWorldPosition(wp);
+    const n = o.name.toLowerCase().replace(/\.\d+$/, ''), team = /spawn[\s_.-]*b\b|team[\s_.-]*b|\bb[\s_.-]*spawn/.test(n) ? 'B' : /spawn[\s_.-]*a\b|team[\s_.-]*a|\ba[\s_.-]*spawn/.test(n) ? 'A' : undefined;
+    const x = wp.x - c.x + w/2, z = wp.z - c.z + d/2, y = Math.max(0, wp.y - box.min.y);
+    objects.push({ id:'sp' + objects.length, name:o.name.slice(0, 24), kind:'spawn', team, pos:[x, y, z], rotY:Math.atan2(-(w/2 - x), -(d/2 - z)) });
+  });
+  const mats = [['concrete', 'Concrete', 'concrete', 2, .92, 0], ['steel-wall', 'Steel wall', 'steelWall', 3, .8, .2], ['concrete-dark', 'Dark concrete', 'concreteDark', 2, .9, 0]]
+    .map(([id, name, gen, tile, rough, metal]) => ({ id, name, type:'builtin', gen, tile, rough, metal }));
+  const name = String(fileName || 'Blender map').replace(/\.glb$/i, '').slice(0, 40);
+  return { v:1, name, w, d, wallH:Math.max(6, Math.ceil(size.y + 2)), walls:false, wallSides:{ n:false, s:false, w:false, e:false }, floor:true, fallDepth:30, glb:1,
+    env:{ floorMat:'concrete', wallMat:'steel-wall', ceilMat:'concrete-dark', ambient:1, sky:'#9fb6cc', fog:Math.max(150, Math.max(w, d)*2), roof:'none' },
+    materials:mats, models:[{ id:'mdl-map', name, src:'data:model/gltf-binary;base64,' + b64OfBuffer(buf), size:[size.x, size.y, size.z].map(v => Math.max(v, .01)) }], objects };
+}
+function useCustomMap(code, note) {
+  savedCustom = code; mapChoice = 'custom'; store.set('hr-map', 'custom');
+  try { localStorage.removeItem('hr-custom-map'); } catch (e) {}
+  mapDB.set('hr-custom-map', code);
+  syncMapUi(); if (note) $('mapStatus').textContent = note;
+}
+async function loadMapFile(f) {
+  try {
+    $('mapStatus').textContent = `Loading ${f.name}…`;
+    if (/\.glb$/i.test(f.name)) {
+      const md = await mapFromGlb(await f.arrayBuffer(), f.name), code = JSON.stringify(md);
+      const sp = md.objects.filter(o => o.kind === 'spawn').length;
+      useCustomMap(code, `${md.name}: ${Math.round(md.w)} × ${Math.round(md.d)} m, ${sp ? sp + ' spawn point' + (sp > 1 ? 's' : '') : 'no spawn points (add empties named spawn_a / spawn_b in Blender)'}. ${(code.length/1048576).toFixed(1)} MB.`);
+    } else {
+      const code = (await f.text()).trim(); parseMapCode(code); useCustomMap(code);
+    }
+  } catch (e) { $('mapStatus').textContent = `Couldn't load ${f.name}: ${e && e.message ? e.message : 'not a .glb or map file'}. In Blender use File → Export → glTF 2.0 with Format "glTF Binary (.glb)".`; }
+}
 // add shape boxes (metres) to the map's solids; models finish loading after the match starts, so also add them
 // to the copies the building system keeps
 function addShapeColliders(boxes, mw, mdp) {
@@ -877,13 +941,15 @@ function setCustomMap(md, code) {
   NAV = null;
   currentMap = { id:hashText(code), name:String(md.name || 'Custom map').slice(0, 40), data:md, code };
   md.wallSides = md.wallSides || { n:md.walls !== false, s:md.walls !== false, w:md.walls !== false, e:md.walls !== false };
-  const env = md.env || {}, mw = clamp(+md.w || 40, 10, 200), mdp = clamp(+md.d || 30, 10, 200), WH = clamp(+md.wallH || 5.5, 1, 30);
+  const env = md.env || {}, mw = clamp(+md.w || 40, 10, 400), mdp = clamp(+md.d || 30, 10, 400), WH = clamp(+md.wallH || 5.5, 1, 30);
   W = mw/S; H = mdp/S;
   scene.background = new THREE.Color(env.sky || '#0a0b0d');
   scene.fog = env.fog > 0 ? new THREE.Fog(env.sky || '#0a0b0d', env.fog*.35, env.fog) : null;
   hemi.intensity = Number.isFinite(+env.ambient) ? +env.ambient : .55;
   if (md.floor !== false) {
-    const fl = new THREE.Mesh(boxGeo(mw, .02, mdp), mapMaterial(md, env.floorMat || 'concrete', /^#[0-9a-f]{6}$/i.test(md.floorTint) ? md.floorTint : '#ffffff')); fl.position.set(mw/2, -.01, mdp/2); WG.add(fl); solids.push(fl);
+    let fm = mapMaterial(md, env.floorMat || 'concrete', /^#[0-9a-f]{6}$/i.test(md.floorTint) ? md.floorTint : '#ffffff');
+    if (md.glb) { fm = fm.clone(); fm.polygonOffset = true; fm.polygonOffsetFactor = 4; fm.polygonOffsetUnits = 4; }
+    const fl = new THREE.Mesh(boxGeo(mw, .02, mdp), fm); fl.position.set(mw/2, -.01, mdp/2); WG.add(fl); solids.push(fl);
   }
   const decal = new THREE.Mesh(new THREE.PlaneGeometry(mw, mdp), new THREE.MeshBasicMaterial({ map:floorTex, transparent:true, depthWrite:false }));
   decal.rotation.x = -Math.PI/2; decal.position.set(mw/2, .006, mdp/2); WG.add(decal);
@@ -917,6 +983,15 @@ function setCustomMap(md, code) {
       mapModel(md, o.model).then(info => {
         if (currentMap.code !== code) return;
         const inst = info.scene.clone(true); inst.scale.set(w/info.size[0], h/info.size[1], d/info.size[2]); g.add(inst);
+        let nl = 0;
+        inst.traverse(m => {
+          if (m.isMesh && /spawn/i.test(m.name)) m.visible = false;
+          if (m.isLight) {
+            if (++nl > 16) { m.visible = false; return; }
+            if (m.isDirectionalLight) m.intensity = clamp(m.intensity, .2, 1.5);
+            else { m.intensity = clamp(m.intensity/25, .3, 3); m.distance = m.distance || 30; m.decay = 1.2; }
+          }
+        });
         // solid models collide with their real shape, and bullets hit their real surfaces
         if (solid) { addShapeColliders(voxelBoxes(meshTris(g)), mw, mdp); inst.traverse(m => { if (m.isMesh) solids.push(m); }); }
       }).catch(() => {});
@@ -2030,7 +2105,10 @@ syncPickers();
 let savedCustom = null;
 try { const c = localStorage.getItem('hr-custom-map'); if (c) { parseMapCode(c); savedCustom = c; } } catch (e) {}
 let mapChoice = store.get('hr-map', 'bay4');
-if (mapChoice === 'custom' && !savedCustom) mapChoice = 'bay4';
+if (mapChoice === 'custom' && !savedCustom) {
+  mapChoice = 'bay4';
+  mapDB.get('hr-custom-map').then(c => { if (!c || savedCustom) return; try { parseMapCode(c); savedCustom = c; if (store.get('hr-map', '') === 'custom') mapChoice = 'custom'; syncMapUi(); } catch (e) {} });
+} else if (!savedCustom) mapDB.get('hr-custom-map').then(c => { if (!c || savedCustom) return; try { parseMapCode(c); savedCustom = c; syncMapUi(); } catch (e) {} });
 if (mapChoice.startsWith('b:') && !BUILTIN_MAPS.some(m => 'b:' + m.id === mapChoice)) mapChoice = 'bay4';
 function customName() { try { return savedCustom ? JSON.parse(savedCustom).name || 'Custom map' : ''; } catch (e) { return 'Custom map'; } }
 function syncMapUi() {
@@ -2041,7 +2119,7 @@ function syncMapUi() {
   sel.value = mapChoice;
   const b = BUILTIN_MAPS.find(m => 'b:' + m.id === mapChoice);
   $('mapStatus').textContent = mapChoice === 'custom' ? `${NET.canShareMaps ? 'Online, everyone who joins your room downloads it.' : 'Custom maps are for bot matches here; online uses Bay 4.'}`
-    : b ? b.about : 'The original warehouse. Make your own maps in Bay Forge and load their map code here.';
+    : b ? b.about : 'The original warehouse. Make your own map in Blender, export it as .glb, and load it with Load map (or drop the file here).';
 }
 function applyMapChoice() {
   // online, the room decides the map: the host's choice, downloaded by everyone else
@@ -2053,7 +2131,7 @@ function applyMapChoice() {
   else if (currentMap.id !== 'bay4') setBay4();
 }
 $('mapSelect').addEventListener('change', e => { mapChoice = e.target.value; store.set('hr-map', mapChoice); syncMapUi(); });
-TEAM = DUOS ? 2 : clamp(parseInt(store.get('hr-team-size', '2')) || 2, 2, 8);
+TEAM = DUOS ? 2 : clamp(parseInt(store.get('hr-team-size', '2')) || 2, 1, 8);
 function syncTeamUi() {
   for (const b of $('teamPick').children) b.setAttribute('aria-pressed', b.dataset.m === 'duos' ? DUOS : !DUOS && +b.dataset.m === TEAM);
   $('teamStatus').textContent = DUOS ? `Teams of two, every duo for itself. Against bots it's you and a bot partner against three bot duos. First duo to ${teamTarget()} kills, or the most kills after 5:00.`
@@ -2066,7 +2144,11 @@ for (const b of $('teamPick').children) b.addEventListener('click', () => {
   DUOS = b.dataset.m === 'duos'; TEAM = DUOS ? 2 : +b.dataset.m;
   store.set('hr-match', DUOS ? 'duos' : 'teams'); if (!DUOS) store.set('hr-team-size', String(TEAM)); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
 syncTeamUi();
-$('mapLoadBtn').addEventListener('click', () => { $('mapModal').hidden = false; $('mapCodeMsg').textContent = ''; $('mapCode').focus(); });
+$('mapLoadBtn').addEventListener('click', () => $('mapFile').click());
+$('mapFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadMapFile(f); });
+// drop a .glb anywhere on the menu
+addEventListener('dragover', e => { if (state !== 'play') e.preventDefault(); });
+addEventListener('drop', e => { if (state === 'play') return; e.preventDefault(); const f = [...(e.dataTransfer.files || [])].find(x => /\.(glb|json|txt)$/i.test(x.name)); if (f) loadMapFile(f); });
 $('mapCodeClose').addEventListener('click', () => { $('mapModal').hidden = true; });
 $('mapCodeLoad').addEventListener('click', () => {
   const code = $('mapCode').value.trim();
@@ -2233,7 +2315,7 @@ function makeRelayRoom(roomId) {
       const n = Math.ceil(cm.code.length/CH);
       send({ t:'map', to, d:{ t:'meta', id:cm.id, name:cm.name, n } });
       let i = 0;
-      const pump = () => { if (ws.readyState !== 1) return; for (let k = 0; k < 8 && i < n; k++, i++) send({ t:'map', to, d:{ t:'c', i, d:cm.code.slice(i*CH, (i+1)*CH) } }); if (i < n) setTimeout(pump, 500); };
+      const pump = () => { if (ws.readyState !== 1) return; for (let k = 0; k < 20 && i < n; k++, i++) send({ t:'map', to, d:{ t:'c', i, d:cm.code.slice(i*CH, (i+1)*CH) } }); if (i < n) setTimeout(pump, 500); };
       pump();
     }
     const room = {
