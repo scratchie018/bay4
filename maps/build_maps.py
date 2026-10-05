@@ -161,6 +161,15 @@ def campfire(x, z): return [P(x, z, .9, .25, .9, 'tex:lava', shape='cyl', name='
 def snowpile(x, z, rot=0): return [P(x, z, 2.4, .9, 1.6, 'tex:snow', shape='wedge', rot=rot, name='Snow drift')]
 def bollard(x, z): return [P(x, z, .35, .8, .35, 'tex:plate', 'solid', 'cyl', '#c9a33b', name='Bollard')]
 def flat(lists): return [p for l in lists for p in l]
+def cone(x, z): return [P(x, z, .35, .7, .35, 'plain', shape='cyl', tint='#e8742a', name='Traffic cone')]
+def dashes(z, x0, x1, tint='#e6e1d6', seg=3, gap=6): return [P(x + seg/2, z, seg, .02, .16, 'plain', tint=tint, y0=.004, name='Lane marking') for x in range(int(x0), int(x1), seg + gap)]
+def line(z, x0, x1, tint='#e6e1d6'): return [P((x0 + x1)/2, z, x1 - x0, .02, .16, 'plain', tint=tint, y0=.004, name='Edge line')]
+def wreck(x, z, rot=0, tint='#4a5866'): return [P(x, z, 4.3, 1.2, 1.9, 'plain', 'solid', rot=rot, tint=tint, name='Stalled car'), P(x - .3, z, 2.2, .5, 1.6, 'plain', 'solid', rot=rot, tint='#1d2126', y0=1.2, name='Stalled car roof')]
+def truck(x, z, length=12, tint='#c0563f'): return [P(x, z, length, 3.6, 2.5, 'tex:ribbed', 'solid', tint=tint, name='Trailer'), P(x + length/2 + 1.6, z, 2.8, 3.0, 2.4, 'plain', 'solid', tint='#d9d4c8', name='Truck cab')]
+def overpass(x, z0, z1, deck_y=6.5):
+    zc, d = (z0 + z1)/2, z1 - z0
+    return [P(x, zc, 7, .8, d, 'concrete', tint='#9aa0a6', y0=deck_y, name='Overpass deck'), P(x, zc, .3, 1, d, 'concrete', tint='#7d838a', y0=deck_y + .8, name='Overpass rail'),
+            P(x + 3.3, zc, .3, 1, d, 'concrete', tint='#7d838a', y0=deck_y + .8, name='Overpass rail'), P(x - 3.3, zc, .3, 1, d, 'concrete', tint='#7d838a', y0=deck_y + .8, name='Overpass rail')]
 
 # ---------------- maps ----------------
 # coordinates are (x0, y0, x1, y1) in cells, inclusive. Team A spawns at the bottom, team B at the top.
@@ -234,6 +243,26 @@ MAPS = [
                 ('c', 3, 19, 1, 1), ('c', 26, 3, 1, 1)],
          spawn_a=[(2, 18), (2, 21), (5, 21), (7, 18), (12, 21), (17, 21), (22, 21), (27, 19)],
          spawn_b=[(2, 2), (7, 2), (12, 2), (17, 2), (22, 2), (27, 2), (27, 5), (2, 5)]),
+    dict(id='highway', name='Highway', about='Six-lane highway with stalled traffic, a broken median, an overpass and a rest stop. Long sightlines for the AWP; grab a car and race the lanes.',
+         size=(80, 34), wall_mat='concrete', wall_tint='#8d9399', floor_mat='concrete-dark', floor_tint='#55595e', cover_mat='concrete', cover_tint='#b9bcbf',
+         ambient=1.15, sky='#a7c3dc', fog=230, wall_h=4,
+         props=flat([[P(80, 6, 156, .02, 8, 'grass', tint='#6f8f4f', y0=.003, name='Verge'), P(80, 56, 156, .02, 20, 'tex:pavers', y0=.003, name='Rest stop paving'), P(80, 45, 156, .02, 2.5, 'grass', tint='#6f8f4f', y0=.003, name='Verge')],
+                     line(10.3, 2, 158, '#e0c24a'), line(23.7, 2, 158), line(28.3, 2, 158), line(41.7, 2, 158, '#e0c24a'),
+                     dashes(14.9, 3, 157), dashes(19.3, 3, 157), dashes(32.9, 3, 157), dashes(37.3, 3, 157),
+                     overpass(81, 3, 47), truck(40, 13.0), truck(110, 39.0, 10, '#3f7fc0'), truck(132, 16.5, 14, '#4f9a5c'),
+                     wreck(24, 21.2, .25), wreck(62, 30.5, -.3, '#8a3b3b'), wreck(96, 17.5, .1, '#c9a33b'), wreck(146, 34.5, .4), wreck(14, 36.8, -.15, '#5a4a7a'),
+                     cone(54, 18), cone(56, 19.3), cone(58, 20.6), cone(120, 31), cone(122, 32.4), cone(124, 33.8), cone(70, 12), cone(72, 12.4),
+                     pine(6, 3), pine(26, 4), pine(48, 3.5), pine(102, 4), pine(126, 3), pine(152, 4.5),
+                     lamp_post(20, 26, '#ffe2b0'), lamp_post(60, 26, '#ffe2b0'), lamp_post(100, 26, '#ffe2b0'), lamp_post(140, 26, '#ffe2b0'),
+                     awning(100, 55, 14, 8, '#c0563f'), bollard(95, 55), bollard(99, 55), bollard(103, 55), bollard(107, 55),
+                     barrel(36, 62, '#3f7fc0'), barrel(37, 63, '#c0563f'), crate_stack(150, 62), crate_stack(70, 64, 'tex:planks'), stripes(90, 52, 16, .3)]),
+         open=[(1, 1, 78, 32)],
+         cover=[('c', 2, 12, 9, 1), ('c', 15, 12, 9, 1), ('c', 28, 12, 9, 1), ('c', 44, 12, 9, 1), ('c', 57, 12, 9, 1), ('c', 70, 12, 8, 1),
+                ('P', 40, 1, 1, 2, 'concrete', '#9aa0a6'), ('P', 40, 12, 1, 1, 'concrete', '#9aa0a6'), ('P', 40, 22, 1, 1, 'concrete', '#9aa0a6'),
+                ('P', 4, 25, 8, 5, 'tex:plaster', '#e8dfcf'), ('P', 30, 26, 6, 4, 'tex:redbrick'), ('P', 62, 25, 9, 6, 'tex:ribbed', '#8d99a6'),
+                ('C', 14, 27, 2, 1, 'tex:planks'), ('C', 50, 29, 1, 2, 'tex:planks'), ('c', 46, 24, 2, 1), ('c', 74, 27, 1, 2)],
+         spawn_a=[(2, 6), (2, 9), (2, 15), (2, 18), (2, 3), (2, 21), (3, 31), (6, 31)],
+         spawn_b=[(77, 6), (77, 9), (77, 15), (77, 18), (77, 3), (77, 21), (76, 31), (73, 31)]),
 ]
 
 if __name__ == '__main__':
