@@ -4,9 +4,10 @@
 //   client -> relay  {t:'p', p:{...presence}}            my latest state
 //                    {t:'getmap'}                         ask the host for the room's map
 //                    {t:'map', to:id, d:{...}}            (host only) a piece of the map for one player
+//                    {t:'v', d:base64}                    80 ms of voice (sent on to players within ~35 m)
 //   relay -> client  {t:'hello', id, host, peers:[{id,p}]}
 //                    {t:'p', id, p}  {t:'left', id}  {t:'host', id}
-//                    {t:'getmap', from:id}  {t:'map', d:{...}}
+//                    {t:'getmap', from:id}  {t:'map', d:{...}}  {t:'v', id, d}
 const ALLOWED = ['https://scratchie018.github.io', 'http://127.0.0.1', 'http://localhost'];
 const MAX_PLAYERS = 20, MAX_MSG = 16384, MAX_RATE = 40;   // messages per second per player
 
@@ -56,6 +57,16 @@ export class Room {
     let msg; try { msg = JSON.parse(data); } catch (e) { return; }
     if (msg.t === 'p' && msg.p && typeof msg.p === 'object') { this.presence.set(a.id, msg.p); this.broadcast({ t:'p', id:a.id, p:msg.p }, ws); }
     else if (msg.t === 'getmap') { const h = this.hostId(); for (const s of this.sockets()) if (this.info(s).id === h && s !== ws) this.send(s, { t:'getmap', from:a.id }); }
+    else if (msg.t === 'v' && typeof msg.d === 'string' && msg.d.length <= 4000) {
+      // voice: only to players close enough to hear it (positions come from their presence)
+      const me = this.presence.get(a.id), out = JSON.stringify({ t:'v', id:a.id, d:msg.d });
+      for (const s of this.sockets()) {
+        if (s === ws) continue;
+        const o = this.presence.get(this.info(s).id);
+        if (me && o && Number.isFinite(me.x) && Number.isFinite(o.x) && Math.hypot(me.x - o.x, me.y - o.y) > 1400) continue;
+        try { s.send(out); } catch (e) {}
+      }
+    }
     else if (msg.t === 'map' && a.id === this.hostId() && typeof msg.to === 'string') { for (const s of this.sockets()) if (this.info(s).id === msg.to) this.send(s, { t:'map', d:msg.d }); }
   }
   async webSocketClose(ws) { this.left(ws); }

@@ -188,6 +188,12 @@ tr.me td{color:var(--sodium);font-weight:700}
 #game.touch #slots{display:none}
 #carHud{left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--steel);background:rgba(10,11,13,.6);border:1px solid var(--edge);padding:5px 10px;white-space:nowrap;display:flex;gap:10px;align-items:center}
 #carHud:empty{display:none}
+#buildHud{left:50%;bottom:calc(52px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--steel);background:rgba(10,11,13,.7);border:1px solid var(--edge);padding:5px 10px;white-space:nowrap;display:flex;gap:10px;align-items:center}
+#buildHud:empty{display:none}
+#voiceHud{left:16px;top:180px;display:grid;gap:4px;font-size:12px;font-weight:700;letter-spacing:.06em}
+#voiceHud>*{background:rgba(10,11,13,.6);padding:2px 8px;width:fit-content}#voiceHud b{color:#6fd36f}#voiceHud .k{color:var(--steel);font-weight:600}
+@media (max-height:500px){#voiceHud{top:124px}}
+#buildHud b{color:#6fd36f}#buildHud .on{color:#141619;background:var(--bone);padding:1px 5px}#buildHud .off{opacity:.35}#buildHud .k{color:#6d757d;font-weight:600}
 #carHud b{color:var(--sodium)}
 #carHud i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bone);margin-left:3px}
 #carHud i.gone{background:var(--blood)}
@@ -257,6 +263,8 @@ tr.me td{color:var(--sodium);font-weight:700}
     <div class="hud" id="hitm"><i></i><i></i><i></i><i></i></div>
     <div class="hud" id="aimName"></div>
     <div class="hud" id="carHud"></div>
+    <div class="hud" id="buildHud"></div>
+    <div class="hud" id="voiceHud"></div>
   </div>
   <div class="hud" id="feed"></div>
   <div class="hud" id="callout"></div>
@@ -278,7 +286,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       <button class="tb sm" id="tReload" type="button">RELOAD</button>
       <button class="tb" id="tCar" type="button" hidden>CAR</button>
     </div>
-    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button></div>
+    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button><button class="ghost" id="buildBtn" type="button">Build</button><button class="ghost" id="talkBtn" type="button" hidden>Talk</button></div>
     <div id="rotateHint">Turn your phone sideways for a bigger view</div>
   </div>
 
@@ -327,6 +335,8 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div>AWP / Knife <span><kbd>1</kbd><kbd>3</kbd><kbd>Q</kbd></span></div>
         <div>Reload <kbd>R</kbd></div>
         <div>Crouch <kbd>C</kbd></div>
+        <div>Build (1–4, T turn, click) <kbd>B</kbd></div>
+        <div>Talk (online) <kbd>V</kbd></div>
         <div>Car in / out <kbd>E</kbd></div>
         <div>Switch seat <kbd>X</kbd></div>
         <div>Car boost / brake <span><kbd>Shift</kbd><kbd>Space</kbd></span></div>
@@ -346,10 +356,14 @@ tr.me td{color:var(--sodium);font-weight:700}
           <button class="ghost cxbtn" id="cheatsRoom" type="button" aria-pressed="false">Cheats room: off</button>
           <button class="go-btn" id="startOnline" type="button" disabled>Play online</button>
         </div>
+        <div class="netrow">
+          <div class="seg" id="voicePick"><button type="button" data-v="ptt">Voice: push to talk</button><button type="button" data-v="open">Open mic</button><button type="button" data-v="off">Voice off</button></div>
+          <label class="fld" for="voiceVol"><span class="lbl">VOICE VOLUME</span><input type="range" id="voiceVol" min="0" max="2" step="0.1"></label>
+        </div>
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 5 Oct 2026 · 21:00 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 5 Oct 2026 · 22:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -501,6 +515,11 @@ function groundAt(x, y, feet) {
   for (const r of PLATS) {
     if (x < r.x - 4 || x > r.x + r.w + 4 || y < r.y - 4 || y > r.y + r.h + 4) continue;
     if (r.ht <= feet + STEP && r.ht > g) g = r.ht;
+  }
+  for (const b of BUILT) {
+    if (b.t !== 1) continue;
+    const h = rampHeight(b, x, y);
+    if (h !== null && h <= feet + STEP && h > g) g = h;
   }
   return g;
 }
@@ -1050,6 +1069,7 @@ function updSwing(e, dt) {
       if (!e.alive) break;
     }
   }
+  if (e.isPlayer && !s.bd && s.t >= Sp.act && !s.hit.size) { s.bd = true; knifeBuilds(e, s.type); }
   if (s.t >= Sp.end) e.swing = null;
 }
 function damage(a, o, dmg, how) {
@@ -1115,7 +1135,7 @@ const sparkGeo = new THREE.SphereGeometry(.07, 6, 4);
 function castWorld(origin, dir, withFighters, skip) {
   ray.set(origin, dir); ray.far = 120;
   const cars = carHitMeshes.filter(m => !(skip && skip.inCar === m.userData.car));
-  const targets = withFighters ? solids.concat(cars, hitMeshes.filter(m => m.userData.ent !== skip && m.userData.ent.alive && !shielded(m.userData.ent))) : solids.concat(cars);
+  const targets = withFighters ? solids.concat(cars, buildMeshes, hitMeshes.filter(m => m.userData.ent !== skip && m.userData.ent.alive && !shielded(m.userData.ent))) : solids.concat(cars, buildMeshes);
   const hits = ray.intersectObjects(targets, false);
   return hits[0] || null;
 }
@@ -1138,7 +1158,8 @@ function playerFire() {
   const muzzle = origin.clone().addScaledVector(right, scoped ? 0 : .18).addScaledVector(up, scoped ? -.05 : -.14).addScaledVector(dir, .6);
   tracer(muzzle, end, 0xffb35c);
   if (NET.on) NET.shot = { q:++NET.seq, a:[muzzle.x, muzzle.y, muzzle.z].map(v => +v.toFixed(2)), b:[end.x, end.y, end.z].map(v => +v.toFixed(2)) };
-  if (h && h.object.userData.car) { const pt = h.object.userData.part; carDamage(h.object.userData.car, pt, pt[0] === 't' ? 999 : pt[0] === 'd' ? 85 : 90, p); }
+  if (h && h.object.userData.build) buildDamage(h.object.userData.build, 110, p);
+  else if (h && h.object.userData.car) { const pt = h.object.userData.part; carDamage(h.object.userData.car, pt, pt[0] === 't' ? 999 : pt[0] === 'd' ? 85 : 90, p); }
   else if (h && h.object.userData.ent) {
     const part = h.object.userData.part;
     const tgt = h.object.userData.ent, how = { weapon:'awp', hs:part === 'head', noscope:!scoped };
@@ -1392,6 +1413,9 @@ addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.code === 'KeyE') { tryCar(); return; }
   if (e.code === 'KeyX') { nextSeat(); return; }
+  if (e.code === 'KeyB') { toggleBuild(); return; }
+  if (e.code === 'KeyV') { VC.ptt = true; return; }
+  if (BLD.on) { const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code); if (n >= 0) { pickBuild(n); return; } if (e.code === 'KeyT') { BLD.turn++; return; } }
   if (player.inCar && player.seat === 0 && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) { carBoost(); return; }
   if (e.code === 'Space' && player.alive && !player.inCar) player.wantJump = true;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { const [mx, my] = moveDir(); if (mx || my) dash(player, mx, my); else dash(player, Math.cos(player.ang), Math.sin(player.ang)); }
@@ -1401,7 +1425,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ') swapTo(player.weapon === 'awp' ? 'knife' : 'awp');
   if (e.code === 'KeyR') startReload();
 });
-addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Tab') $('board').hidden = true; });
+addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'KeyV') VC.ptt = false; if (e.code === 'Tab') $('board').hidden = true; });
 function lookBy(dx, dy) {
   if (!player || !player.alive) return;
   const k = .0022*sens*(camera.fov/AWP.fov[0]);
@@ -1417,11 +1441,13 @@ document.addEventListener('mousemove', e => {
 cv.addEventListener('mousedown', e => {
   if (state !== 'play') return;
   if (lockOK && !touchMode && !isLocked()) { requestLock(); return; }
+  if (BLD.on) { if (e.button === 0) placeBuild(); if (e.button === 2) toggleBuild(false); return; }
   if (e.button === 0) { mouse.L = true; if (player.weapon === 'awp') playerFire(); }
   if (e.button === 2) altFire();
 });
 addEventListener('mouseup', e => { if (e.button === 0) mouse.L = false; if (e.button === 2) mouse.R = false; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { if (BLD.on && state === 'play') BLD.turn += e.deltaY > 0 ? 1 : -1; }, { passive:true });
 // Mouse lock. Browsers refuse a re-lock for about a second after Esc, and never allow one from the Esc key.
 // A refusal after the lock has worked once is that cooldown: show "Click to aim" and lock on the next click.
 // Only a page that has never been able to lock (some embedded views) falls back to plain mouse movement.
@@ -1472,7 +1498,7 @@ lz.addEventListener('pointerup', endLook); lz.addEventListener('pointercancel', 
 // the fire button doubles as a look pad: hold it and slide to keep aiming while attacking
 const fireLook = { id:null, x:0, y:0 };
 $('tFire').addEventListener('pointerdown', e => {
-  e.preventDefault(); mouse.L = true; if (player.weapon === 'awp') playerFire();
+  e.preventDefault(); if (BLD.on) { placeBuild(); return; } mouse.L = true; if (player.weapon === 'awp') playerFire();
   fireLook.id = e.pointerId; fireLook.x = e.clientX; fireLook.y = e.clientY; try { $('tFire').setPointerCapture(e.pointerId); } catch (er) {}
 });
 $('tFire').addEventListener('pointermove', e => { if (e.pointerId !== fireLook.id) return; lookBy((e.clientX-fireLook.x)*1.6, (e.clientY-fireLook.y)*1.6); fireLook.x = e.clientX; fireLook.y = e.clientY; });
@@ -1483,6 +1509,13 @@ for (const ev of ['pointerup','pointercancel','pointerleave']) $('tJump').addEve
 $('tCar').addEventListener('pointerdown', e => { e.preventDefault(); tryCar(); });
 $('tCrouch').addEventListener('pointerdown', e => { e.preventDefault(); if (keys.has('KeyC')) keys.delete('KeyC'); else keys.add('KeyC'); });
 $('tReload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
+$('buildBtn').addEventListener('click', () => toggleBuild());
+$('talkBtn').addEventListener('pointerdown', e => { e.preventDefault(); VC.ptt = true; });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('talkBtn').addEventListener(ev, () => { VC.ptt = false; });
+function syncVoiceUi() { for (const b of $('voicePick').children) b.setAttribute('aria-pressed', b.dataset.v === VC.mode); $('voiceVol').value = VC.vol; }
+for (const b of $('voicePick').children) b.addEventListener('click', () => { VC.mode = b.dataset.v; store.set('hr-voice', VC.mode); syncVoiceUi(); if (VC.mode === 'off') voiceStop(); else if (NET.on) voiceStart(); });
+$('voiceVol').addEventListener('input', () => { VC.vol = +$('voiceVol').value; store.set('hr-voice-vol', String(VC.vol)); });
+queueMicrotask(syncVoiceUi);
 $('scoresBtn').addEventListener('click', () => { const b = $('board'); b.hidden = !b.hidden; if (!b.hidden) renderBoard($('boardT')); });
 $('board').addEventListener('click', () => { if (touchMode) $('board').hidden = true; });
 // phones: go fullscreen and sideways when a match starts (needs the tap that started it)
@@ -1499,9 +1532,9 @@ function phoneScreen() {
 $('start').addEventListener('click', phoneScreen);
 $('startOnline').addEventListener('click', phoneScreen);
 $('resume').addEventListener('click', phoneScreen);
-$('tAlt').addEventListener('pointerdown', e => { e.preventDefault(); altFire(); });
+$('tAlt').addEventListener('pointerdown', e => { e.preventDefault(); if (BLD.on) { BLD.turn++; return; } altFire(); });
 $('tMove').addEventListener('pointerdown', e => { e.preventDefault(); if (player.inCar) { carBoost(); return; } const [mx, my] = moveDir(); if (mx || my) dash(player, mx, my); else dash(player, Math.cos(player.ang), Math.sin(player.ang)); });
-$('tSwap').addEventListener('pointerdown', e => { e.preventDefault(); swapTo(player.weapon === 'awp' ? 'knife' : 'awp'); });
+$('tSwap').addEventListener('pointerdown', e => { e.preventDefault(); if (BLD.on) { let n = BLD.type; do n = (n + 1) % BUILD_TYPES.length; while (player.inCar && n < 2); pickBuild(n); return; } swapTo(player.weapon === 'awp' ? 'knife' : 'awp'); });
 $('pauseBtn').addEventListener('click', () => pause());
 
 function moveDir() {
@@ -1631,6 +1664,9 @@ function updHud(dt) {
   $('dashB').style.transform = `scaleX(${1-clamp(player.dashCd/1.3, 0, 1)})`;
   $('slots').hidden = mode !== 'awp';
   $('s1').classList.toggle('on', player.weapon === 'awp'); $('s3').classList.toggle('on', player.weapon === 'knife');
+  const hudV = voiceHudText(); if ($('voiceHud').dataset.v !== hudV) { $('voiceHud').innerHTML = hudV; $('voiceHud').dataset.v = hudV; }
+  $('talkBtn').hidden = !(touchMode && voiceOK() && VC.mode === 'ptt');
+  const hudB = buildHudText(); if ($('buildHud').dataset.v !== hudB) { $('buildHud').innerHTML = hudB; $('buildHud').dataset.v = hudB; }
   const hudCar = carHudText(); if ($('carHud').dataset.v !== hudCar) { $('carHud').innerHTML = hudCar; $('carHud').dataset.v = hudCar; }
   if (player.inCar && player.seat === 0) {
     const car = player.inCar;
@@ -1766,7 +1802,7 @@ function startMatch() {
   } else ents.push(...BOTS.map(([n, c]) => mk(n, c, FKEYS[Math.random()*FKEYS.length|0], false)));
   for (const e of ents) { if (!e.isPlayer) buildFighter(e); }
   for (const e of ents) spawn(e);
-  setupCars();
+  setupBuild(); setupCars();
   matchT = TEAM ? 300 : MATCH; shake = hurt = 0; $('feed').innerHTML = '';
   for (const id of ['menu','end','pause','board']) $(id).hidden = true;
   $('hud').hidden = false; $('touch').hidden = !touchMode;
@@ -1781,7 +1817,7 @@ let touchKey = '';
 function updTouchLabels() {
   if (!touchMode || !player) return;
   const k = player.weapon === 'knife', c = keys.has('KeyC'), seat = player.inCar ? player.seat : -1, near = seat < 0 && player.alive && !!nearCar(player);
-  const key = `${k}${c}${mode}${seat}${near}`;
+  const key = `${k}${c}${mode}${seat}${near}${BLD.on}`;
   if (key === touchKey) return; touchKey = key;
   const drive = seat === 0, ride = seat > 0;
   $('tFire').textContent = k ? 'SLASH' : 'FIRE'; $('tAlt').textContent = k ? 'STAB' : 'SCOPE';
@@ -1791,11 +1827,15 @@ function updTouchLabels() {
   $('tReload').hidden = k || drive; $('tSwap').hidden = mode !== 'awp' || drive; $('tCrouch').hidden = seat >= 0;
   $('tCar').hidden = !(near || seat >= 0); $('tCar').textContent = seat >= 0 ? 'EXIT' : 'CAR';
   $('tCrouch').classList.toggle('on', c);
+  if (BLD.on) {
+    $('tFire').hidden = $('tAlt').hidden = $('tSwap').hidden = false; $('tFire').textContent = 'PLACE'; $('tAlt').textContent = 'TURN'; $('tSwap').textContent = 'NEXT';
+  } else $('tSwap').textContent = 'SWAP';
+  $('buildBtn').textContent = BLD.on ? 'Done' : 'Build';
 }
 function pause() {
   if (state !== 'play') return;
   renderCheats();
-  touchHandbrake = false;
+  touchHandbrake = false; VC.ptt = false;
   state = 'pause'; $('pause').hidden = false; $('game').classList.remove('playing'); mouse.L = mouse.R = false; keys.clear();
   if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -2030,7 +2070,7 @@ function makeRelayRoom(roomId) {
     const ws = new WebSocket(`${RELAY_WS}/room/${roomId}`);
     const listeners = [], others = new Map();
     let me = null, host = null, myPresence = {}, myUpd = 0, lastSend = 0, pending = null, firing = false, closed = false;
-    const mapWaiters = new Set();
+    const mapWaiters = new Set(), voiceFns = new Set();
     const list = () => [{ peer:me, sameTab:true, presence:myPresence, updatedAt:myUpd },
       ...[...others].map(([id, o]) => ({ peer:id, sameTab:false, presence:o.presence, updatedAt:o.updatedAt }))];
     const fire = left => { if (left) { for (const fn of listeners) fn({ peers:list(), left }); return; }
@@ -2049,6 +2089,7 @@ function makeRelayRoom(roomId) {
       else if (m.t === 'host') host = m.id;
       else if (m.t === 'getmap') serveMap(m.from);
       else if (m.t === 'map') for (const w of mapWaiters) w(m.d);
+      else if (m.t === 'v' && typeof m.d === 'string') for (const f of voiceFns) f(m.id, m.d);
     };
     ws.onerror = () => { if (!me) { clearTimeout(t); reject(new Error('relay unreachable')); } };
     ws.onclose = () => { if (me && !closed) { NET.netError = 'Lost the connection to the relay.'; if (NET.on) toMenu(); else leaveOnline(); updateNetStatus(); } };
@@ -2075,6 +2116,8 @@ function makeRelayRoom(roomId) {
       },
       leave() { closed = true; try { ws.close(); } catch (e) {} },
       isHost:() => host === me,
+      voice(d) { send({ t:'v', d }); },
+      onVoice(fn) { voiceFns.add(fn); },
       fetchMap(onProgress) {
         return new Promise((res, rej) => {
           let meta = null, parts = [], got = 0;
@@ -2266,7 +2309,7 @@ async function startOnline() {
 }
 function beginOnlineMatch() {
   startMatch();
-  NET.on = true; NET.hits = []; NET.ce = []; NET.died = null; NET.shot = null; NET.round = 0; NET.roundEnd = 0; NET.seen.clear();
+  NET.on = true; NET.hits = []; NET.ce = []; NET.be = []; NET.died = null; NET.shot = null; NET.round = 0; NET.roundEnd = 0; NET.seen.clear();
   player.name = 'You'; player.color = NET.color;
   clearFighters(); ents = [player];
   if (TEAM) {
@@ -2278,15 +2321,19 @@ function beginOnlineMatch() {
   readPeers({ peers:NET.room.peers(), left:[] });
   spawn(player);
   $('feed').innerHTML = '';
+  if (NET.room.onVoice) NET.room.onVoice(voiceIn);
+  voiceStart();
   callout(NET.cheatsRoom ? 'CHEATS ROOM' : NET.room.isHost() ? 'HOSTING' : 'ONLINE', `ROOM ${NET.code.toUpperCase()} · FIRST TO ${LIMIT}`);
   applyCheatVisuals();
 }
 function leaveOnline() {
+  voiceStop();
   NET.on = false; NET.forceMap = null;
   if (NET.room) { NET.room.leave(); NET.room = null; }
   updateNetStatus();
   for (const e of ents) if (e.remote) dropRemote(e);
   ents = ents.filter(e => !e.remote);
+  for (const b of BUILT.filter(b => !b.mine)) removeBuild(b);
 }
 function dropRemote(e) {
   if (e.inCar) { if (e.inCar.driver === e) e.inCar.driver = null; e.inCar = null; e.seat = -1; }
@@ -2301,13 +2348,13 @@ function readPeers(ch) {
     if (p.sameTab) continue;
     const pr = p.presence;
     let e = remoteFor(p.peer);
-    if (!inMatch(pr)) { if (e) { dropRemote(e); ents = ents.filter(x => x !== e); } continue; }
+    if (!inMatch(pr)) { dropPeerBuilds(p.peer); if (e) { dropRemote(e); ents = ents.filter(x => x !== e); } continue; }
     if (!e) {
       const col = /^#[0-9a-f]{6}$/i.test(pr.c) ? pr.c : '#9aa4ad';
       e = mk(cleanText(pr.n, 14) || 'Player', col, FINISHES[pr.f] ? pr.f : 'fade', false);
       Object.assign(e, { remote:true, peer:p.peer, team:pr.tm === 1 ? 1 : 0, snaps:[], alive:!!pr.al, weapon:pr.w === 'awp' ? 'awp' : 'knife', lastUpd:0 });
       // ignore anything this player did before we arrived
-      NET.seen.set(p.peer, { ce:Math.max(0, ...(Array.isArray(pr.ce) ? pr.ce.map(h => +(h && h.q) || 0) : [0])), hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
+      NET.seen.set(p.peer, { be:Math.max(0, ...(Array.isArray(pr.be) ? pr.be.map(h => +(h && h.q) || 0) : [0])), ce:Math.max(0, ...(Array.isArray(pr.ce) ? pr.ce.map(h => +(h && h.q) || 0) : [0])), hit:Math.max(0, ...(Array.isArray(pr.hits) ? pr.hits.map(h => +h.q || 0) : [0])), died:+(pr.died && pr.died.q) || 0, shot:+(pr.shot && pr.shot.q) || 0, sw:+(pr.sw && pr.sw.q) || 0 });
       buildFighter(e); ents.push(e); applyCheatVisuals();
     }
     if (p.updatedAt === e.lastUpd) continue;
@@ -2329,7 +2376,7 @@ function readPeers(ch) {
     if (alive && !e.alive) { e.alive = true; e.deadT = 0; e.snaps = e.snaps.slice(-1); if (e.mesh) { e.mesh.g.visible = true; e.mesh.g.rotation.set(0, 0, 0); e.mesh.g.position.y = 0; } }
     if (!alive && e.alive) { e.alive = false; e.deadT = 0; }
     const seen = NET.seen.get(p.peer);
-    readCarNet(p, pr, e, seen);
+    readCarNet(p, pr, e, seen); readBuildNet(p, pr, e, seen);
     const dist = Math.hypot(e.x - player.x, e.y - player.y), vol = clamp(1 - dist/1400, .08, .9);
     // swing started
     if (pr.sw && +pr.sw.q > seen.sw) { seen.sw = +pr.sw.q; e.swing = { type:pr.sw.t === 'stab' ? 'stab' : 'slash', t:0, hit:new Set(), side:pr.sw.s < 0 ? -1 : 1 }; sfx(e.swing.type, vol); }
@@ -2364,7 +2411,7 @@ function readPeers(ch) {
       feedPush(killer, e, how);
     }
   }
-  for (const p of ch.left || []) { const e = remoteFor(p.peer); if (e) { dropRemote(e); ents = ents.filter(x => x !== e); } }
+  for (const p of ch.left || []) { dropPeerBuilds(p.peer); const e = remoteFor(p.peer); if (e) { dropRemote(e); ents = ents.filter(x => x !== e); } }
 }
 function netHit(a, o, dmg, how) {
   if (a.isPlayer && cheat('onehit')) dmg = 999;
@@ -2417,7 +2464,7 @@ function netFrame() {
     x:Math.round(p.x), y:Math.round(p.y), a:r2(p.ang), p:r2(p.pitch), j:r2(p.jumpY), vx:Math.round(p.vx), vy:Math.round(p.vy),
     al:p.alive ? 1 : 0, hp:Math.ceil(Math.max(0, p.hp)), z:p.zoom, ds:p.dashT > 0 ? 1 : 0, pt:p.prot > 0 ? 1 : 0,
     sw:p.swing ? { q:NET.swq, t:p.swing.type, s:p.swing.side } : null,
-    vh:carsOn ? 1 : 0, vc:p.inCar ? [p.inCar.i, p.seat] : null, vs:carNetState(), ce:NET.ce,
+    vh:carsOn ? 1 : 0, vc:p.inCar ? [p.inCar.i, p.seat] : null, vs:carNetState(), ce:NET.ce, bd:buildNetState(), be:NET.be,
     k:p.kills, d:p.deaths, r:NET.round, hits:NET.hits, died:NET.died, shot:NET.shot, ob:OWN.priv ? OWN.badge : null, oc:OWN.cmd,
   }).catch(() => {});
 }
@@ -2710,6 +2757,7 @@ function driveCar(car, dt, inp) {
   const want = inp.st*CAR.steer*(1 - .55*clamp(Math.abs(car.v)/1000, 0, 1)) + pull*clamp(Math.abs(car.v)/300, 0, 1);
   car.steer += (want - car.steer)*Math.min(1, dt*8);
   const before = car.ang;
+  if ((car.oilT || 0) > 0) { car.oilT -= dt; if (!car.spin) car.spin = Math.random() < .5 ? -1 : 1; car.ang += car.spin*clamp(Math.abs(car.v)/500, 0, 1.4)*3.4*dt; car.v *= 1 - .5*dt; } else car.spin = 0;
   car.ang += car.v/CAR.wb*Math.tan(car.steer)*(inp.hb ? 1.5 : 1)*(1 - .12*nflat)*dt;
   moveCar(car, dt);
   return car.ang - before;
@@ -2723,7 +2771,7 @@ function moveCar(car, dt) {
   const mine = car.driver ? car.driver.isPlayer || !car.driver.remote : true;
   // walls: three circles along the car
   const c = Math.cos(car.ang), s = Math.sin(car.ang), R = 41;
-  let hit = 0, px = 0, py = 0;
+  let hit = 0, px = 0, py = 0, hitB = null;
   for (const off of [-60, 0, 60]) {
     const cx = car.x + c*off, cy = car.y + s*off;
     for (const r of RECTS) {
@@ -2733,6 +2781,7 @@ function moveCar(car, dt) {
       if (d === 0) { const l = cx - r.x, ri = r.x + r.w - cx, t = cy - r.y, b = r.y + r.h - cy, m = Math.min(l, ri, t, b); ox = m === l ? -(l + R) : m === ri ? ri + R : 0; oy = m === t ? -(t + R) : m === b ? b + R : 0; }
       else { ox = dx/d*(R - d); oy = dy/d*(R - d); }
       if (Math.abs(ox) > Math.abs(px)) px = ox; if (Math.abs(oy) > Math.abs(py)) py = oy; hit = 1;
+      if (r.build) hitB = r.build;
     }
     const bx = clamp(cx, R + 8, W - R - 8) - cx, by = clamp(cy, R + 8, H - R - 8) - cy;
     if (bx || by) { if (Math.abs(bx) > Math.abs(px)) px = bx; if (Math.abs(by) > Math.abs(py)) py = by; hit = 1; }
@@ -2758,6 +2807,7 @@ function moveCar(car, dt) {
   if (hit) {
     const m = Math.hypot(px, py) || 1, into = -(c*px + s*py)/m*Math.sign(car.v), impact = Math.max(0, into)*Math.abs(car.v);
     car.x += px; car.y += py;
+    if (hitB && impact > 150 && mine) buildDamage(hitB, (impact - 100)*.5, car.driver || null);
     if (impact > 150 && hit === 1) {
       if (mine && (car.ramT || 0) <= 0) { car.ramT = .4; carDamage(car, 'b', (impact - 150)*.04, car.driver || null); if (car.driver === player || player.inCar === car) { shake = Math.max(shake, Math.min(12, impact/80)); sfx('thud', clamp(impact/700, .2, 1)); } }
       car.v = -car.v*.25;
@@ -2791,7 +2841,8 @@ function updCars(dt) {
     } else if (Math.abs(car.v) > 1) { const before = car.ang; coastCar(car, dt); if (player.inCar === car && player.seat > 0) player.ang += car.ang - before; }
     // ground: follow ramps and platforms, fall where there is no floor
     const g = groundAt(car.x, car.y, car.h + .5);
-    if (g >= car.h - .05) { car.h = g; car.vh = 0; } else { car.vh -= 16*dt; car.h = Math.max(g, car.h + car.vh*dt); }
+    // on the ground the car follows it (and keeps the climb speed, so it flies off the top of a ramp)
+    if (g >= car.h - .05) { car.vh = clamp((g - car.h)/Math.max(dt, .001), 0, 12); car.h = g; } else { car.vh -= 16*dt; car.h = Math.max(g, car.h + car.vh*dt); }
     const fall = currentMap.data ? clamp(+currentMap.data.fallDepth || 25, 2, 500) : 25;
     if (car.h < -fall) { for (const e of ents) if (e.inCar === car && !e.remote) { exitCar(e, true); fellOut(e); } car.hp.eng = 0; explodeCar(car, null, true); continue; }
     if (car.hp.eng < CAR.eng*.35 && (car.smokeT -= dt) <= 0) { car.smokeT = car.hp.eng < CAR.eng*.15 ? .06 : .14; carPuff(car, car.hp.eng < CAR.eng*.15); }
@@ -3021,6 +3072,320 @@ function carHudText() {
     + (touchMode ? '' : ` <span class="k">E exit · X seat${player.seat === 0 ? ' · Shift boost · Space brake' : ''}</span>`);
 }
 
+/* ---------- building ----------
+   B opens build mode: 1 wall, 2 ramp, 3 spike strip, 4 oil slick; T or the mouse wheel turns it, click places it.
+   In a car you can drop spikes and oil behind you. Up to 10 pieces each; an 11th replaces your oldest.
+   Walls block people, cars and bullets and can be broken. Ramps can be run up and launch cars.
+   Online: everyone shares their own pieces (presence `bd`) and the damage they do to others' (presence `be`). */
+const BUILD_TYPES = [
+  { k:'wall',   name:'WALL',   w:84, d:14,  ht:2.4,  hp:220, solid:true },
+  { k:'ramp',   name:'RAMP',   w:84, d:170, ht:1.7,  hp:160 },
+  { k:'spikes', name:'SPIKES', w:84, d:26,  ht:.12,  hp:90 },
+  { k:'oil',    name:'OIL',    w:130, d:130, ht:.012, hp:60 },
+];
+const BUILD_MAX = 10;
+let BUILT = [], BASE_RECTS = null, BASE_PLATS = null, buildMeshes = [];
+const BLD = { on:false, type:0, turn:0, ghost:null, ghostType:-1, cd:0, seq:0, ok:false, spot:null };
+const bmats = {};
+const bmat = (c, op = 1) => bmats[c + op] || (bmats[c + op] = new THREE.MeshStandardMaterial({ color:c, roughness:.8, flatShading:true, transparent:op < 1, opacity:op, depthWrite:op >= 1 }));
+// footprint in map pixels: pieces face one of four directions; `d` runs along the facing direction
+function buildRect(b) {
+  const T = BUILD_TYPES[b.t], along = b.rot % 2 === 0, w = along ? T.d : T.w, h = along ? T.w : T.d;
+  return { x:b.x - w/2, y:b.y - h/2, w, h };
+}
+const buildDir = rot => [[1, 0], [0, 1], [-1, 0], [0, -1]][rot & 3];
+function rampHeight(b, x, y) {
+  const r = buildRect(b), [dx, dy] = buildDir(b.rot), T = BUILD_TYPES[b.t];
+  if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return null;
+  const t = dx ? (dx > 0 ? (x - r.x)/r.w : (r.x + r.w - x)/r.w) : (dy > 0 ? (y - r.y)/r.h : (r.y + r.h - y)/r.h);
+  return T.ht*clamp(t, 0, 1);
+}
+function buildMesh(b, ghost = false) {
+  const T = BUILD_TYPES[b.t], g = new THREE.Group(), tint = new THREE.Color(b.color || '#a07850');
+  const wood = bmat('#' + new THREE.Color('#8a6a45').lerp(tint, .25).getHexString());
+  if (T.k === 'wall') {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(T.d*S, T.ht, T.w*S), wood); m.position.y = T.ht/2; g.add(m);
+    for (const y of [.5, 1.2, 1.9]) { const s = new THREE.Mesh(new THREE.BoxGeometry(T.d*S + .02, .07, T.w*S + .02), bmat('#5a442c')); s.position.y = y; g.add(s); }
+    const band = new THREE.Mesh(new THREE.BoxGeometry(T.d*S + .03, .12, T.w*S + .03), bmat('#' + tint.getHexString())); band.position.y = T.ht - .12; g.add(band);
+  } else if (T.k === 'ramp') {
+    // a wedge rising along +x (the facing direction before rotation)
+    const L = T.d*S, Wd = T.w*S, H = T.ht, sh = new THREE.Shape(); sh.moveTo(-L/2, 0); sh.lineTo(L/2, 0); sh.lineTo(L/2, H); sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth:Wd, bevelEnabled:false }); geo.translate(0, 0, -Wd/2);
+    g.add(new THREE.Mesh(geo, wood));
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(L*1.0, .03, .14), bmat('#' + tint.getHexString())); stripe.position.set(0, H/2 + .02, 0); stripe.rotation.z = Math.atan2(H, L); g.add(stripe);
+  } else if (T.k === 'spikes') {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(T.d*S, .04, T.w*S), bmat('#2a2c30')); base.position.y = .02; g.add(base);
+    const cone = new THREE.ConeGeometry(.05, .12, 4);
+    for (let i = 0; i < 12; i++) for (const zz of [-.18, .18]) { const c = new THREE.Mesh(cone, bmat('#b8c0c8')); c.position.set(zz*.9, .1, -T.w*S/2 + .15 + i*(T.w*S - .3)/11); g.add(c); }
+  } else {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(T.w*S/2, 18), new THREE.MeshStandardMaterial({ color:0x0b0b0d, roughness:.08, metalness:.4, transparent:true, opacity:.85, depthWrite:false }));
+    m.rotation.x = -Math.PI/2; m.position.y = .012; g.add(m);
+    const sheen = new THREE.Mesh(new THREE.RingGeometry(T.w*S*.18, T.w*S*.3, 18), new THREE.MeshBasicMaterial({ color:0x4a3f7a, transparent:true, opacity:.35, depthWrite:false }));
+    sheen.rotation.x = -Math.PI/2; sheen.position.y = .014; g.add(sheen);
+  }
+  const gy = groundAt(b.x, b.y, .4); g.position.set(b.x*S, gy > 0 ? gy : 0, b.y*S); g.rotation.y = -b.rot*Math.PI/2;
+  if (!ghost && (T.k === 'wall' || T.k === 'ramp')) g.traverse(o => { if (o.isMesh) { o.userData = { build:b }; buildMeshes.push(o); } });
+  return g;
+}
+function addBuild(b) {
+  b.hp = b.hp ?? BUILD_TYPES[b.t].hp; b.mesh = buildMesh(b); scene.add(b.mesh);
+  BUILT.push(b); refreshBuildSolids();
+  return b;
+}
+function removeBuild(b, smash) {
+  if (!BUILT.includes(b)) return;
+  BUILT = BUILT.filter(x => x !== b);
+  if (b.mesh) { scene.remove(b.mesh); buildMeshes = buildMeshes.filter(m => m.userData.build !== b); }
+  if (smash) {
+    const T = BUILD_TYPES[b.t];
+    for (let i = 0; i < 14; i++) fxBox(i % 3 ? '#8a6a45' : '#5a442c', 1, b.x*S + rand(-.8, .8), rand(.2, T.ht), b.y*S + rand(-.8, .8), rand(.12, .3), rand(-3, 3), rand(2, 5), rand(-3, 3), rand(1, 2), 14, 0);
+    sfx('thud', clamp(1.2 - Math.hypot(b.x - player.x, b.y - player.y)/1500, .1, .8));
+  }
+  refreshBuildSolids();
+}
+function clearBuilds() { for (const b of [...BUILT]) removeBuild(b); BUILT = []; BASE_RECTS = BASE_PLATS = null; }
+function setupBuild() { clearBuilds(); BASE_RECTS = RECTS.slice(); BASE_PLATS = PLATS.slice(); BLD.on = false; BLD.seq = 0; showGhost(false); }
+// walls join the map's solids so movement, bots, line of sight and cars all respect them
+function refreshBuildSolids() {
+  if (!BASE_RECTS) return;
+  const walls = BUILT.filter(b => BUILD_TYPES[b.t].solid).map(b => ({ ...buildRect(b), ht:BUILD_TYPES[b.t].ht, build:b }));
+  RECTS = BASE_RECTS.concat(walls);
+  PLATS = BASE_PLATS.concat(walls.map(r => ({ x:r.x, y:r.y, w:r.w, h:r.h, y0:0, ht:r.ht, build:r.build })));
+  NAV = null;
+}
+// damage a piece; online the damage is shared so the owner (and everyone) sees it
+function buildDamage(b, dmg, by, fromNet) {
+  if (!b || !(dmg > 0) || !BUILT.includes(b)) return;
+  if (NET.on && !fromNet && b.owner !== NET.myPeer) { NET.be.push({ q:++NET.seq, o:b.owner, id:b.id, dm:Math.round(dmg) }); if (NET.be.length > 8) NET.be.shift(); }
+  b.hp -= dmg;
+  if (by === player) hitMark(b.hp <= 0);
+  if (b.hp <= 0) removeBuild(b, true);
+}
+function myBuilds() { return BUILT.filter(b => b.mine); }
+// where the selected piece would go: 2.4 m in front of you (behind the car if you're in one), snapped to a 20 px grid
+function buildSpot() {
+  const p = player, T = BUILD_TYPES[BLD.type];
+  let x, y, rot;
+  if (p.inCar) {
+    const car = p.inCar, back = CAR.len/2 + T.d/2 + 30;
+    x = car.x - Math.cos(car.ang)*back; y = car.y - Math.sin(car.ang)*back;
+    rot = (Math.round(car.ang/(Math.PI/2)) % 4 + 4) % 4;
+  } else {
+    const a = p.ang, dist = 96 + T.d/2;
+    x = p.x + Math.cos(a)*dist; y = p.y + Math.sin(a)*dist;
+    rot = ((Math.round(a/(Math.PI/2)) + BLD.turn) % 4 + 4) % 4;
+  }
+  x = Math.round(x/20)*20; y = Math.round(y/20)*20;
+  const b = { t:BLD.type, x, y, rot }, r = buildRect(b);
+  let ok = r.x > 10 && r.y > 10 && r.x + r.w < W - 10 && r.y + r.h < H - 10;
+  if (ok && (T.solid || T.k === 'ramp')) {
+    if (RECTS.some(o => r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y)) ok = false;
+    if (ents.some(e => e.alive && !e.inCar && e.x > r.x - e.r && e.x < r.x + r.w + e.r && e.y > r.y - e.r && e.y < r.y + r.h + e.r)) ok = false;
+    if (CARS.some(c => carGap(c, x, y) < Math.max(r.w, r.h)/2)) ok = false;
+  }
+  if (ok && BUILT.some(o => o.t === b.t && Math.abs(o.x - x) < 10 && Math.abs(o.y - y) < 10)) ok = false;
+  return { b, ok };
+}
+function placeBuild() {
+  if (!BLD.on || BLD.cd > 0 || !player.alive) return;
+  const { b, ok } = buildSpot();
+  if (!ok) { sfx('click', .6); return; }
+  const mine = myBuilds();
+  if (mine.length >= BUILD_MAX) removeBuild(mine[0]);
+  b.id = ++BLD.seq; b.mine = true; b.owner = NET.on ? NET.myPeer : 'me'; b.ownerEnt = player; b.color = TEAM ? TEAMS[player.team].color : (NET.on ? NET.color : '#e0b25a');
+  addBuild(b); BLD.cd = .45; sfx('thud', .5);
+}
+function showGhost(on) {
+  if (!on || !BLD.on) { if (BLD.ghost) BLD.ghost.visible = false; return; }
+  if (BLD.ghostType !== BLD.type) {
+    if (BLD.ghost) scene.remove(BLD.ghost);
+    BLD.ghost = buildMesh({ t:BLD.type, x:0, y:0, rot:0, color:'#ffffff' }, true);
+    BLD.ghost.traverse(o => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color:0x6fd36f, transparent:true, opacity:.4, depthWrite:false }); o.userData = {}; } });
+    scene.add(BLD.ghost); BLD.ghostType = BLD.type;
+  }
+  const { b, ok } = buildSpot();
+  BLD.ghost.visible = true; BLD.ghost.position.set(b.x*S, 0, b.y*S); BLD.ghost.rotation.y = -b.rot*Math.PI/2;
+  BLD.ghost.traverse(o => { if (o.isMesh) o.material.color.setHex(ok ? 0x6fd36f : 0xe5484d); });
+}
+function toggleBuild(on) {
+  BLD.on = on ?? !BLD.on;
+  if (BLD.on && player.inCar && BLD.type < 2) BLD.type = 2;
+  if (BLD.on) { player.zoom = 0; player.swing = null; }
+  showGhost(BLD.on); touchKey = '';
+}
+function pickBuild(i) {
+  if (player.inCar && i < 2) return;
+  BLD.type = i; BLD.on = true; showGhost(true); touchKey = '';
+}
+// spikes pop tires and hurt people on foot; oil spins cars out and makes people slide
+function updBuild(dt) {
+  BLD.cd -= dt;
+  if (BLD.on && (!player.alive || (player.inCar && player.seat === 0 && BLD.type < 2))) toggleBuild(false);
+  showGhost(BLD.on && player.alive);
+  for (const b of BUILT) {
+    const T = BUILD_TYPES[b.t]; if (T.k !== 'spikes' && T.k !== 'oil') continue;
+    const r = buildRect(b), inside = (x, y, pad = 0) => x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad;
+    for (const car of CARS) {
+      if (car.wreck || Math.abs(car.h) > .5 || Math.hypot(car.x - b.x, car.y - b.y) > 260) continue;
+      if (T.k === 'oil') { if (inside(car.x, car.y, 20) && Math.abs(car.v) > 60) car.oilT = 1.4; continue; }
+      // only the car's own simulator pops its tires (the driver, or me if nobody drives it)
+      const local = car.driver ? car.driver === player || !car.driver.remote : !NET.on || car.auth === NET.myPeer;
+      if (!local) continue;
+      const c = Math.cos(car.ang), s = Math.sin(car.ang);
+      [[58, -34], [58, 34], [-56, -34], [-56, 34]].forEach(([u, v], i) => {
+        if (car.hp.t[i] > 0 && inside(car.x + c*u - s*v, car.y + s*u + c*v)) carDamage(car, 't' + i, 999, b.ownerEnt || null);
+      });
+    }
+    for (const e of ents) {
+      if (!e.alive || e.inCar || e.remote || (e.jumpY || 0) > .3 || !inside(e.x, e.y)) continue;
+      if (T.k === 'oil') { e.oilT = .25; continue; }
+      if (!b.ownerEnt || b.ownerEnt === e || !enemy(b.ownerEnt, e)) continue;
+      if ((e.spikeT || 0) < perfNow) { e.spikeT = perfNow + .8; damage(b.ownerEnt || e, e, 25, { weapon:'knife' }); }
+    }
+  }
+}
+// knife swings chip at walls and ramps in front of you
+function knifeBuilds(e, type) {
+  const reach = SPEC[type].range + 24, x = e.x + Math.cos(e.ang)*reach*.7, y = e.y + Math.sin(e.ang)*reach*.7;
+  for (const b of BUILT) {
+    const T = BUILD_TYPES[b.t]; if (!T.solid && T.k !== 'ramp') continue;
+    const r = buildRect(b);
+    if (x > r.x - 18 && x < r.x + r.w + 18 && y > r.y - 18 && y < r.y + r.h + 18) { buildDamage(b, type === 'stab' ? 45 : 30, e); sfx('hit', .5); return true; }
+  }
+  return false;
+}
+// online: share my pieces, mirror everyone else's
+function buildNetState() { return myBuilds().map(b => [b.id, b.t, Math.round(b.x), Math.round(b.y), b.rot, Math.max(0, Math.round(b.hp))]); }
+function readBuildNet(p, pr, e, seen) {
+  const num = (v, d = 0) => Number.isFinite(+v) ? +v : d;
+  if (Array.isArray(pr.bd)) {
+    const want = new Map();
+    for (const s of pr.bd.slice(0, BUILD_MAX)) if (Array.isArray(s)) want.set(num(s[0]) | 0, s);
+    for (const b of BUILT.filter(b => b.owner === p.peer)) {
+      const s = want.get(b.id);
+      if (!s) removeBuild(b, b.hp > 0 && b.hp < BUILD_TYPES[b.t].hp);
+      else { b.hp = Math.min(b.hp, num(s[5], b.hp)); if (b.hp <= 0) removeBuild(b, true); want.delete(b.id); }
+    }
+    for (const [id, s] of want) {
+      const t = clamp(num(s[1]) | 0, 0, BUILD_TYPES.length - 1), hp = num(s[5], BUILD_TYPES[t].hp);
+      if (hp <= 0) continue;
+      addBuild({ id, t, x:clamp(num(s[2]), 0, W), y:clamp(num(s[3]), 0, H), rot:num(s[4]) & 3, hp, owner:p.peer, ownerEnt:e, color:e.color });
+    }
+  }
+  if (Array.isArray(pr.be)) for (const h of pr.be.slice(-8)) {
+    const q = num(h && h.q) | 0; if (q <= seen.be) continue; seen.be = q;
+    const owner = h.o === NET.myPeer ? NET.myPeer : h.o;
+    const b = BUILT.find(x => x.owner === owner && x.id === (num(h.id) | 0));
+    if (b) buildDamage(b, clamp(num(h.dm), 0, 999), e, true);
+  }
+}
+function dropPeerBuilds(peer) { for (const b of BUILT.filter(b => b.owner === peer)) removeBuild(b); }
+function buildHudText() {
+  if (!BLD.on) return '';
+  const types = BUILD_TYPES.map((T, i) => `<span class="${i === BLD.type ? 'on' : ''}${player.inCar && i < 2 ? ' off' : ''}">${i + 1} ${T.name}</span>`).join('');
+  return `<b>BUILD</b> ${types} <span class="n">${myBuilds().length}/${BUILD_MAX}</span>` + (touchMode ? '' : ' <span class="k">click place · T turn · B done</span>');
+}
+
+/* ---------- proximity voice chat (GitHub version, through the relay) ----------
+   Mic audio is resampled to 12 kHz, packed 8 bits a sample (mu-law, like a phone line) in 80 ms chunks and sent
+   through the relay. Each voice plays from where that player stands: louder up close, panned left/right, silent
+   past ~30 m and muffled behind walls. Push to talk on V (or the TALK button), or open mic. */
+const VC = { mode:store.get('hr-voice', 'ptt'), vol:+store.get('hr-voice-vol', '1') || 1, ac:null, mic:null, proc:null, src:null, out:null,
+  ptt:false, talking:false, level:0, buf:[], peers:new Map(), err:'', seq:0 };
+const VRATE = 12000, VCHUNK = 960;   // 80 ms
+function muEnc(x) { const s = x < 0 ? 0x80 : 0; let m = Math.min(32635, Math.abs(x)*32767) + 132, e = 7; for (let b = 0x4000; e > 0 && !(m & b); b >>= 1) e--; return ~(s | (e << 4) | ((m >> (e + 3)) & 15)) & 255; }
+const MU_DEC = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const u = ~i & 255, s = u & 0x80, e = (u >> 4) & 7, m = u & 15; const v = (((m << 3) + 132) << e) - 132; MU_DEC[i] = (s ? -v : v)/32768; }
+const voiceOK = () => !!(NET.on && NET.room && NET.room.voice && VC.mode !== 'off');
+async function voiceStart() {
+  if (VC.mic || VC.mode === 'off' || !NET.room || !NET.room.voice) return;
+  try {
+    VC.ac = VC.ac || new AudioContext();
+    VC.mic = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1 } });
+    if (!NET.on) { voiceStop(); return; }
+    const ac = VC.ac; if (ac.state !== 'running') ac.resume();
+    VC.src = ac.createMediaStreamSource(VC.mic);
+    VC.proc = ac.createScriptProcessor(2048, 1, 1);
+    const ratio = ac.sampleRate/VRATE; let pos = 0;
+    VC.proc.onaudioprocess = ev => {
+      const d = ev.inputBuffer.getChannelData(0); let pk = 0;
+      for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
+      VC.level = VC.level*.7 + pk*.3;
+      const send = VC.mode === 'open' ? VC.level > .02 : VC.ptt;
+      VC.talking = send && player && NET.on;
+      if (!VC.talking) { VC.buf.length = 0; pos = 0; return; }
+      // resample to 12 kHz by averaging each span of input samples
+      for (; pos + ratio <= d.length; pos += ratio) { let s = 0, n = 0; for (let j = pos | 0; j < (pos + ratio | 0); j++) { s += d[j]; n++; } VC.buf.push(n ? s/n : 0); }
+      pos -= d.length;
+      while (VC.buf.length >= VCHUNK) {
+        const chunk = VC.buf.splice(0, VCHUNK), bytes = new Uint8Array(VCHUNK);
+        for (let i = 0; i < VCHUNK; i++) bytes[i] = muEnc(Math.max(-1, Math.min(1, chunk[i]*1.4)));
+        let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        NET.room.voice(btoa(bin));
+      }
+    };
+    const mute = ac.createGain(); mute.gain.value = 0;   // the processor must be connected to run; send it nowhere audible
+    VC.src.connect(VC.proc); VC.proc.connect(mute); mute.connect(ac.destination);
+    VC.err = '';
+  } catch (e) { VC.err = e && e.name === 'NotAllowedError' ? 'Microphone blocked: allow it in the address bar to talk' : 'No microphone found'; VC.mic = null; }
+}
+function voiceStop() {
+  if (VC.proc) { VC.proc.onaudioprocess = null; try { VC.proc.disconnect(); VC.src.disconnect(); } catch (e) {} }
+  if (VC.mic) for (const t of VC.mic.getTracks()) t.stop();
+  VC.mic = VC.proc = VC.src = null; VC.talking = false; VC.ptt = false;
+  for (const p of VC.peers.values()) try { p.out.disconnect(); } catch (e) {}
+  VC.peers.clear();
+}
+function voicePeer(id) {
+  let p = VC.peers.get(id);
+  if (p) return p;
+  const ac = VC.ac || (VC.ac = new AudioContext());
+  const lp = ac.createBiquadFilter(), pan = ac.createPanner(), out = ac.createGain();
+  lp.type = 'lowpass'; lp.frequency.value = 6000;
+  Object.assign(pan, { panningModel:'HRTF', distanceModel:'linear', refDistance:2, maxDistance:30, rolloffFactor:1 });
+  out.gain.value = VC.vol;
+  lp.connect(pan); pan.connect(out); out.connect(ac.destination);
+  p = { lp, pan, out, next:0, heard:0 }; VC.peers.set(id, p);
+  return p;
+}
+function voiceIn(id, b64) {
+  if (VC.mode === 'off' || typeof b64 !== 'string' || b64.length > 4000) return;
+  const e = remoteFor(id); if (!e) return;
+  const p = voicePeer(id), ac = VC.ac; if (ac.state !== 'running') ac.resume();
+  let bin; try { bin = atob(b64); } catch (er) { return; }
+  const n = bin.length, buf = ac.createBuffer(1, n, VRATE), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = MU_DEC[bin.charCodeAt(i) & 255];
+  // a small jitter buffer: start ~120 ms late so packets arriving unevenly still play smoothly
+  const now = ac.currentTime;
+  if (p.next < now || p.next > now + .5) p.next = now + .12;
+  const s = ac.createBufferSource(); s.buffer = buf; s.connect(p.lp); s.start(p.next); p.next += n/VRATE;
+  p.heard = performance.now();
+}
+// every frame: put each voice where its player is, muffle it behind walls
+function updVoice() {
+  if (!VC.ac || !player) return;
+  const L = VC.ac.listener, t = VC.ac.currentTime, f = new THREE.Vector3(); camera.getWorldDirection(f);
+  const set = (prm, v) => prm ? prm.setTargetAtTime(v, t, .03) : 0;
+  if (L.positionX) { set(L.positionX, camera.position.x); set(L.positionY, camera.position.y); set(L.positionZ, camera.position.z); set(L.forwardX, f.x); set(L.forwardY, f.y); set(L.forwardZ, f.z); set(L.upX, 0); set(L.upY, 1); set(L.upZ, 0); }
+  else { L.setPosition(camera.position.x, camera.position.y, camera.position.z); L.setOrientation(f.x, f.y, f.z, 0, 1, 0); }
+  for (const [id, p] of VC.peers) {
+    const e = remoteFor(id); if (!e) { try { p.out.disconnect(); } catch (er) {} VC.peers.delete(id); continue; }
+    const x = e.x*S, y = (e.jumpY || 0) + 1.6, z = e.y*S;
+    if (p.pan.positionX) { set(p.pan.positionX, x); set(p.pan.positionY, y); set(p.pan.positionZ, z); } else p.pan.setPosition(x, y, z);
+    const walled = !los(player, e);
+    set(p.lp.frequency, walled ? 900 : 6000); set(p.out.gain, VC.vol*(walled ? .55 : 1));
+  }
+}
+function voiceHudText() {
+  if (!NET.on) return '';
+  if (!NET.room || !NET.room.voice) return VC.mode === 'off' ? '' : '<span class="k">Voice needs the relay connection</span>';
+  if (VC.mode === 'off') return '';
+  const now = performance.now(), names = [];
+  for (const [id, p] of VC.peers) if (now - p.heard < 350) { const e = remoteFor(id); if (e) names.push(`<span style="color:${e.color}">🔊 ${escH(e.name)}</span>`); }
+  const me = VC.err ? `<span class="k">${escH(VC.err)}</span>` : VC.talking ? '<b>🎤 TALKING</b>' : `<span class="k">🎤 ${VC.mode === 'open' ? 'open mic' : touchMode ? 'hold TALK' : 'hold V to talk'}</span>`;
+  return [me, ...names].join('');
+}
+
 function update(dt) {
   if (!NET.on) { if (!cheat('notimer')) matchT -= dt; if (matchT <= 0) { endMatch("Time's up"); return; } }
   else netFrame(dt);
@@ -3028,7 +3393,7 @@ function update(dt) {
   const [mx, my] = moveDir();
   if (p.alive) {
     if (cheat('aim')) aimAssist(dt);
-    if (p.weapon === 'knife' && !(p.inCar && p.seat === 0)) { if (mouse.L) attack(p, 'slash'); if (mouse.R) attack(p, 'stab'); }
+    if (p.weapon === 'knife' && !(p.inCar && p.seat === 0) && !BLD.on) { if (mouse.L) attack(p, 'slash'); if (mouse.R) attack(p, 'stab'); }
     if (p.weapon === 'awp') {
       if (p.reloadT > 0) { p.reloadT -= dt; if (p.reloadT <= 0) { p.ammo = AWP.mag; sfx('click', .5); } }
       if (p.cd <= 0 && p.rezoom) { p.zoom = p.rezoom; p.rezoom = 0; }
@@ -3059,7 +3424,7 @@ function update(dt) {
   }
   p.ai.mx = p.inCar ? 0 : mx; p.ai.my = p.inCar ? 0 : my;
   updTouchLabels();
-  updCars(dt);
+  updCars(dt); updBuild(dt); updVoice();
   for (const e of ents) {
     if (e.remote) { remoteStep(e, dt); continue; }
     if (!e.alive) { e.deadT += dt; e.respawn -= dt; if (e.respawn <= 0) spawn(e); continue; }
@@ -3076,7 +3441,7 @@ function update(dt) {
     if (e.isPlayer) { e.crouchAmt = (e.crouchAmt || 0) + ((keys.has('KeyC') && e.alive ? 1 : 0) - (e.crouchAmt || 0))*Math.min(1, dt*12); sp *= 1 - .55*e.crouchAmt; }
     if (e.isPlayer && cheat('speed')) sp *= 2;
     if (e.dashT > 0) { e.dashT -= dt; e.vx = e.dashX*760; e.vy = e.dashY*760; }
-    else { const k = Math.min(1, dt*11); e.vx += (e.ai.mx*sp - e.vx)*k; e.vy += (e.ai.my*sp - e.vy)*k; }
+    else { const k = Math.min(1, dt*((e.oilT || 0) > 0 ? 1.6 : 11)); e.oilT = (e.oilT || 0) - dt; e.vx += (e.ai.mx*sp - e.vx)*k; e.vy += (e.ai.my*sp - e.vy)*k; }
     e.x += e.vx*dt; e.y += e.vy*dt; collideRects(e);
     e.dashPose = e.dashT > 0 ? Math.min(1, e.dashPose + dt*14) : Math.max(0, e.dashPose - dt*3.5);
     if (e.dashT > 0 && !e.isPlayer && (e.ghostT -= dt) <= 0) { e.ghostT = .035; dashGhost(e); }
