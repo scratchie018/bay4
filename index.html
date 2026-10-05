@@ -304,7 +304,7 @@ tr.me td{color:var(--sodium);font-weight:700}
 
   <div class="overlay" id="menu">
     <div class="plate"><div class="in">
-      <div class="eyebrow">BAY 4 · 2V2 · FFA DUOS</div>
+      <div class="eyebrow">BAY 4 · TEAMS · FFA DUOS</div>
       <h1>Hook &amp; Ring</h1>
       <div class="group"><span class="lbl">MODE</span>
         <div class="modes">
@@ -314,7 +314,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       </div>
       <p class="rule">First to 15 kills wins. If nobody gets there, the most kills when the 3:00 clock runs out takes it.</p>
       <div class="group"><span class="lbl">MATCH</span>
-        <div class="seg" id="teamPick"><button type="button" data-m="2v2">2v2</button><button type="button" data-m="duos">FFA Duos</button></div>
+        <div class="seg" id="teamPick"><button type="button" data-m="2">2v2</button><button type="button" data-m="3">3v3</button><button type="button" data-m="4">4v4</button><button type="button" data-m="5">5v5</button><button type="button" data-m="6">6v6</button><button type="button" data-m="7">7v7</button><button type="button" data-m="8">8v8</button><button type="button" data-m="duos">FFA Duos</button></div>
         <div class="netstatus" id="teamStatus"></div>
         <div class="seg" id="carPick" style="margin-top:8px"><button type="button" data-c="1">Cars on</button><button type="button" data-c="0">Cars off</button></div>
       </div>
@@ -374,7 +374,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 5 Oct 2026 · 23:30 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 5 Oct 2026 · 23:45 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -668,7 +668,7 @@ const MAXTEAMS = 6;
 const teamIds = () => [...new Set(ents.map(e => e.team))].sort((a, b) => teamScore(b) - teamScore(a) || a - b);
 const BOT_NAMES = ['Vex','Moth','Kestrel','Ozone','Lark','Grit','Saffi','Rook','Juno','Brask','Nell','Oskar','Pike','Quill','Remy','Tamsin'];
 const enemy = (a, b) => !TEAM || a.team !== b.team;
-const teamTarget = () => DUOS ? 12 : 15;
+const teamTarget = () => DUOS ? 12 : 10 + 5*(TEAM - 1);
 function teamScore(t) { return ents.filter(e => e.team === t).reduce((s, e) => s + e.kills, 0); }
 function teamShade(t, i) {
   const n = parseInt(TEAMS[t].color.slice(1), 16), k = .78 + (i % 4)*.09;
@@ -1968,16 +1968,18 @@ function applyMapChoice() {
   else if (currentMap.id !== 'bay4') setBay4();
 }
 $('mapSelect').addEventListener('change', e => { mapChoice = e.target.value; store.set('hr-map', mapChoice); syncMapUi(); });
-TEAM = 2;
+TEAM = DUOS ? 2 : clamp(parseInt(store.get('hr-team-size', '2')) || 2, 2, 8);
 function syncTeamUi() {
-  for (const b of $('teamPick').children) b.setAttribute('aria-pressed', (b.dataset.m === 'duos') === DUOS);
+  for (const b of $('teamPick').children) b.setAttribute('aria-pressed', b.dataset.m === 'duos' ? DUOS : !DUOS && +b.dataset.m === TEAM);
   $('teamStatus').textContent = DUOS ? `Teams of two, every duo for itself. Against bots it's you and a bot partner against three bot duos. First duo to ${teamTarget()} kills, or the most kills after 5:00.`
-    : `${TEAMS[0].name} vs ${TEAMS[1].name}, two a side. Against bots you get a bot teammate. No friendly fire. First team to ${teamTarget()} kills, or the most kills after 5:00.`;
+    : `${TEAMS[0].name} vs ${TEAMS[1].name}, ${TEAM} a side. Against bots, bots fill both teams. No friendly fire. First team to ${teamTarget()} kills, or the most kills after 5:00.`;
 }
 function syncCarUi() { for (const b of $('carPick').children) b.setAttribute('aria-pressed', (b.dataset.c === '1') === carsOn); }
 for (const b of $('carPick').children) b.addEventListener('click', () => { carsOn = b.dataset.c === '1'; store.set('hr-cars', carsOn ? '1' : '0'); syncCarUi(); });
 queueMicrotask(syncCarUi);
-for (const b of $('teamPick').children) b.addEventListener('click', () => { DUOS = b.dataset.m === 'duos'; store.set('hr-match', DUOS ? 'duos' : '2v2'); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
+for (const b of $('teamPick').children) b.addEventListener('click', () => {
+  DUOS = b.dataset.m === 'duos'; TEAM = DUOS ? 2 : +b.dataset.m;
+  store.set('hr-match', DUOS ? 'duos' : 'teams'); if (!DUOS) store.set('hr-team-size', String(TEAM)); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
 syncTeamUi();
 $('mapLoadBtn').addEventListener('click', () => { $('mapModal').hidden = false; $('mapCodeMsg').textContent = ''; $('mapCode').focus(); });
 $('mapCodeClose').addEventListener('click', () => { $('mapModal').hidden = true; });
