@@ -374,7 +374,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 01:00 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 6 Oct 2026 · 01:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -3202,7 +3202,22 @@ function updFx(dt) {
 function syncCars() {
   for (const car of CARS) {
     const g = car.mesh; if (!g) continue;
-    g.position.set(car.x*S, car.h, car.y*S); g.rotation.set(0, -car.ang, 0);
+    // tilt to the ground under the wheels: nose up a ramp, lean on a slope; in the air the nose follows the climb/fall
+    const c = Math.cos(car.ang), s = Math.sin(car.ang), probe = (u, v) => groundAt(car.x + c*u - s*v, car.y + s*u + c*v, car.h + .6);
+    const under = groundAt(car.x, car.y, car.h + .6);
+    let tp = 0, tr = 0, lift = 0;
+    if (car.h - under < .2) {
+      let fr = probe(72, 0), bk = probe(-72, 0), lf = probe(0, -34), rt = probe(0, 34);
+      // a wheel hanging over an edge (top of a ramp) follows the slope instead of the floor far below
+      if (fr < under - .3 && bk > -1e3) fr = under + (under - bk); else if (bk < under - .3 && fr > -1e3) bk = under - (fr - under);
+      if (lf < under - .3) lf = under; if (rt < under - .3) rt = under;
+      if (fr > -1e3 && bk > -1e3) { tp = Math.atan2(fr - bk, 144*S); lift = Math.max(0, (fr + bk)/2 - car.h); }
+      if (lf > -1e3 && rt > -1e3) tr = -Math.atan2(rt - lf, 68*S);
+    } else tp = clamp(car.vh*.05, -.45, .45);
+    car.pitch = (car.pitch || 0) + (clamp(tp, -.6, .6) - (car.pitch || 0))*.25;
+    car.roll = (car.roll || 0) + (clamp(tr, -.4, .4) - (car.roll || 0))*.25;
+    g.rotation.order = 'YXZ';
+    g.position.set(car.x*S, car.h + lift, car.y*S); g.rotation.set(car.roll, -car.ang, car.pitch);
     car.parts.wheels.forEach((w, i) => {
       if (!w.steer) return;
       const flat = car.hp.t[i] <= 0, b = w.base || { y:.34 };
