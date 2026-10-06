@@ -62,8 +62,8 @@ function skyUpdate(t) {
   const sunUp = sunH > -.05;
   SKY.lightDir.copy(sunUp ? SKY.sunDir : SKY.sunDir.clone().negate()); SKY.lightDir.y = Math.max(.25, SKY.lightDir.y); SKY.lightDir.normalize();
   moon.color.copy(sunUp ? lerpC('#ffb070', '#fff4e2', THREE.MathUtils.clamp(sunH*3, 0, 1)) : new THREE.Color('#9db4e0'));
-  moon.intensity = sunUp ? .25 + .85*THREE.MathUtils.clamp(sunH*2, 0, 1) : .22;
-  hemi.intensity = SKY.base.hemi*(.48 + .52*day);
+  moon.intensity = sunUp ? .18 + .42*THREE.MathUtils.clamp(sunH*2, 0, 1) : .2;
+  hemi.intensity = SKY.base.hemi*(.48 + .4*day);
   hemi.color.copy(lerpC('#5a6c96', '#c9d8ea', day)); hemi.groundColor.copy(lerpC('#141820', '#4a4034', day));
   if (scene.fog) scene.fog.color.copy(hor);
   scene.background = hor;

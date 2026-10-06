@@ -20,7 +20,7 @@ function gfxInit() {
   GFX.mats = {
     // keep only what's brighter than the threshold (that's what glows)
     bright: sh(`uniform sampler2D tex; uniform float threshold; varying vec2 vUv;
-      void main() { vec3 c = texture2D(tex, vUv).rgb; float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c*smoothstep(threshold, threshold + .35, l), 1.0); }`,
+      void main() { vec3 c = texture2D(tex, vUv).rgb; float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(min(c, vec3(4.0))*smoothstep(threshold, threshold + .5, l), 1.0); }`,
       { tex:{ value:null }, threshold:{ value:.72 } }),
     // 9-tap gaussian blur in one direction
     blur: sh(`uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
@@ -56,7 +56,7 @@ function gfxInit() {
         gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
       }`,
       { tex:{ value:null }, bloom:{ value:null }, px:{ value:new THREE.Vector2() }, bloomK:{ value:.7 }, grain:{ value:.025 }, fringe:{ value:0 }, time:{ value:0 },
-        sat:{ value:1.08 }, contrast:{ value:1.06 }, exposure:{ value:.92 }, tint:{ value:new THREE.Vector3(1.02, 1.0, .97) } }),
+        sat:{ value:1.14 }, contrast:{ value:1.12 }, exposure:{ value:.9 }, tint:{ value:new THREE.Vector3(1.02, 1.0, .97) } }),
   };
   GFX.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), GFX.mats.final); GFX.quad.frustumCulled = false;
   GFX.scene = new THREE.Scene(); GFX.scene.add(GFX.quad); GFX.cam = new THREE.Camera();
@@ -71,7 +71,7 @@ function gfxBegin() {
 function gfxEnd(t) {
   if (GFX.mode === 'off') return;
   const M = GFX.mats, ultra = GFX.mode === 'ultra';
-  M.bright.uniforms.tex.value = GFX.rt.texture; M.bright.uniforms.threshold.value = ultra ? .86 : .93; gfxPass(M.bright, GFX.b0);
+  M.bright.uniforms.tex.value = GFX.rt.texture; M.bright.uniforms.threshold.value = ultra ? 1.0 : 1.1; gfxPass(M.bright, GFX.b0);
   const bw = GFX.b0.width, bh = GFX.b0.height;
   for (let i = 0; i < (ultra ? 3 : 2); i++) {
     M.blur.uniforms.tex.value = GFX.b0.texture; M.blur.uniforms.dir.value.set((1 + i)/bw, 0); gfxPass(M.blur, GFX.b1);
@@ -79,7 +79,7 @@ function gfxEnd(t) {
   }
   const F = M.final.uniforms;
   F.tex.value = GFX.rt.texture; F.bloom.value = GFX.b0.texture; F.px.value.set(1/GFX.w, 1/GFX.h); F.time.value = t % 100;
-  F.bloomK.value = ultra ? .9 : .6; F.grain.value = ultra ? .035 : .02; F.fringe.value = ultra ? .0035 : 0;
+  F.bloomK.value = ultra ? .6 : .4; F.grain.value = ultra ? .035 : .02; F.fringe.value = ultra ? .0035 : 0;
   gfxPass(M.final, null);
 }
 // Ultra: the scene's directional light casts shadows around the player; everything solid casts and receives
