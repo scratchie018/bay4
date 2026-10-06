@@ -21,11 +21,21 @@ addEventListener('error', e => admLog('error', `${e.message} @${(e.filename || '
 const FC = { on:false, pos:new THREE.Vector3(), yaw:0, pitch:0, keys:new Set(), speed:8, frozen:false, keysOn:true, path:[], play:null, dur:8, rec:false };
 function fcStart() {
   if (!admLocal()) { admToast('Free camera works offline, in cheats rooms, or with the owner key unlocked'); return; }
-  FC.on = true; FC.pos.copy(camera.position); keys.clear(); mouse.L = mouse.R = false;
-  const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); FC.yaw = e.y; FC.pitch = e.x;
+  FC.on = true; keys.clear(); mouse.L = mouse.R = false;
+  // start just behind and above yourself, looking at your character
+  const p = player, a = p ? p.ang : 0;
+  if (p && p.alive) { FC.yaw = -a - Math.PI/2; FC.pitch = -.32; FC.pos.set(p.x*S - Math.cos(a)*3.4, (p.jumpY || 0) + 2.6, p.y*S - Math.sin(a)*3.4); }
+  else { FC.pos.copy(camera.position); const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); FC.yaw = e.y; FC.pitch = e.x; }
+  selfBody(true);
   window.__cam = fcCam; admRender();
 }
-function fcStop() { FC.on = false; FC.play = null; window.__cam = null; FC.keys.clear(); admRender(); }
+function fcStop() { FC.on = false; FC.play = null; window.__cam = null; FC.keys.clear(); selfBody(false); admRender(); }
+// in first person you have no body; give yourself one while the free camera is out (rebuilt when the weapon changes)
+function selfBody(on) {
+  const p = player; if (!p) return;
+  if (p.mesh && (!on || p.mesh.weapon !== p.weapon)) { scene.remove(p.mesh.g); hitMeshes = hitMeshes.filter(m => m.userData.ent !== p); p.mesh = null; }
+  if (on && !p.mesh) { buildFighter(p); p.mesh.weapon = p.weapon; }
+}
 function fcCam(cam) {
   if (FC.play) {
     const p = FC.play, k = Math.min(1, (performance.now() - p.t0)/(FC.dur*1000)), P = FC.path, n = P.length - 1;
@@ -99,6 +109,7 @@ const vizSig = () => [RECTS.length, PLATS.length, SPAWNS.length, currentMap.id, 
 const botLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color:0xffe14a, depthTest:false })); botLines.renderOrder = 999; scene.add(botLines);
 function admFrame(dt) {
   ADM.fps = ADM.fps*.95 + (1/Math.max(dt, 1e-3))*.05;
+  if (FC.on) selfBody(true);
   const anyViz = Object.values(ADM.viz).some(Boolean);
   if (anyViz && ADM.vizKey !== vizSig()) vizBuild();
   if (!anyViz && ADM.vizGroup) { scene.remove(ADM.vizGroup); ADM.vizGroup = null; ADM.vizKey = ''; for (const m of carHitMeshes) m.visible = false; }

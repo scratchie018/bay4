@@ -15,6 +15,8 @@ rep("""  render(now/1000, dt);
   // clips:""", """  render(now/1000, dt);
   admShot(); admFrame(Math.max(dt, (now - (frame.prev || now))/1000)); frame.prev = now;
   // clips:""")
+# your own body (shown in free camera) jumps with you
+rep("M.g.position.set(e.x*S, e.remote ? Math.max(-30, e.jumpY || 0) : 0, e.y*S);", "M.g.position.set(e.x*S, e.remote || e.isPlayer ? Math.max(-30, e.jumpY || 0) : 0, e.y*S);")
 rep("function update(dt) {", open(os.path.join(here, 'admin.js')).read() + "\nfunction update(dt) {")
 CSS = """<style>
 #adm{position:fixed;right:0;top:0;bottom:0;width:min(380px,100vw);background:rgba(14,16,19,.94);border-left:1px solid #343a44;z-index:60;color:#e9ecf1;font:13px/1.35 system-ui,sans-serif;display:flex;flex-direction:column}

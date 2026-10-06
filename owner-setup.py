@@ -17,10 +17,18 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 ITER = 600_000
 b64 = lambda b: base64.b64encode(b).decode()
 
-pw = getpass.getpass('Choose an owner password (12+ characters, not one you use elsewhere): ')
+def ask(prompt):
+    # a terminal reads it directly; without one (e.g. "!" in Claude Code) a password window pops up instead
+    if sys.stdin.isatty():
+        return getpass.getpass(prompt + ': ')
+    import subprocess
+    r = subprocess.run(['zenity', '--password', '--title', prompt], capture_output=True, text=True)
+    if r.returncode != 0: sys.exit('Cancelled. Nothing was changed.')
+    return r.stdout.rstrip('\n')
+pw = ask('Choose an owner password (12+ characters, not one you use elsewhere)')
 if len(pw) < 12:
     sys.exit('Too short. Anyone can download the locked key and guess offline, so use at least 12 characters.')
-if getpass.getpass('Type it again: ') != pw:
+if ask('Type the owner password again') != pw:
     sys.exit('The two passwords did not match. Nothing was changed.')
 
 key = ec.generate_private_key(ec.SECP256R1())
