@@ -198,6 +198,9 @@ tr.me td{color:var(--sodium);font-weight:700}
 #carHud:empty{display:none}
 #buildHud{left:50%;bottom:calc(52px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:11px;letter-spacing:.1em;font-weight:700;color:var(--steel);background:rgba(10,11,13,.7);border:1px solid var(--edge);padding:5px 10px;white-space:nowrap;display:flex;gap:10px;align-items:center}
 #buildHud:empty{display:none}
+#recInd,#replayInd{position:absolute;left:180px;top:14px;font:700 12px var(--body);letter-spacing:.12em;padding:3px 9px;background:rgba(10,11,13,.7);z-index:6}
+#recInd{color:#ff5a5a}#replayInd{color:var(--steel);top:40px}
+#recMsg{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(10,11,13,.85);border:1px solid var(--edge);padding:7px 14px;font:600 13px var(--body);z-index:30;white-space:nowrap}
 #voiceHud{left:16px;top:180px;display:grid;gap:4px;font-size:12px;font-weight:700;letter-spacing:.06em}
 #voiceHud>*{background:rgba(10,11,13,.6);padding:2px 8px;width:fit-content}#voiceHud b{color:#6fd36f}#voiceHud .k{color:var(--steel);font-weight:600}
 @media (max-height:500px){#voiceHud{top:124px}}
@@ -277,6 +280,7 @@ tr.me td{color:var(--sodium);font-weight:700}
     <div class="hud" id="voiceHud"></div>
   </div>
   <div class="hud" id="feed"></div>
+  <div id="recInd" hidden>● REC</div><div id="replayInd" hidden>◷ REPLAY ON · F9 saves 30 s</div><div id="recMsg" hidden></div>
   <div class="hud" id="callout"></div>
   <div class="hud" id="death" hidden><div class="k" id="deathMsg">Killed by Vex</div><div class="t" id="respT">2.4</div></div>
   <div class="hud" id="cheatTag" hidden>CHEATS ON</div>
@@ -296,7 +300,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       <button class="tb sm" id="tReload" type="button">RELOAD</button>
       <button class="tb" id="tCar" type="button" hidden>CAR</button>
     </div>
-    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button><button class="ghost" id="buildBtn" type="button">Build</button><button class="ghost" id="chatBtn" type="button">Chat</button><button class="ghost" id="talkBtn" type="button" hidden>Talk</button><button class="ghost" id="radioBtn" type="button" hidden>Radio</button></div>
+    <div class="ttop"><button class="ghost" id="pauseBtn" type="button">Pause</button><button class="ghost" id="scoresBtn" type="button">Scores</button><button class="ghost" id="buildBtn" type="button">Build</button><button class="ghost" id="chatBtn" type="button">Chat</button><button class="ghost" id="recTouch" type="button">Rec</button><button class="ghost" id="talkBtn" type="button" hidden>Talk</button><button class="ghost" id="radioBtn" type="button" hidden>Radio</button></div>
     <div id="rotateHint">Turn your phone sideways for a bigger view</div>
   </div>
 
@@ -347,6 +351,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div>Crouch <kbd>C</kbd></div>
         <div>Build (1–4, T turn, click) <kbd>B</kbd></div>
         <div>Chat / team chat <span><kbd>Enter</kbd><kbd>Y</kbd></span></div>
+        <div>Record / save replay <span><kbd>F8</kbd><kbd>F9</kbd></span></div>
         <div>Talk / team radio (online) <span><kbd>V</kbd><kbd>G</kbd></span></div>
         <div>Car in / out <kbd>E</kbd></div>
         <div>Switch seat <kbd>X</kbd></div>
@@ -374,7 +379,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 12:00 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 6 Oct 2026 · 16:00 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -389,7 +394,7 @@ tr.me td{color:var(--sodium);font-weight:700}
       </div>
       <div id="ownTools" hidden>
         <p class="rule" id="ownWhere"></p>
-        <div class="group"><span class="lbl">PLAYERS IN THIS ROOM</span><div class="row"><select id="ownPlayer" aria-label="Player"></select><button class="ghost" id="ownKick" type="button">Kick</button></div></div>
+        <div class="group"><span class="lbl">PLAYERS IN THIS ROOM</span><div class="row"><select id="ownPlayer" aria-label="Player"></select><button class="ghost" id="ownKick" type="button">Kick</button></div><div class="row"><button class="ghost" id="ownSlay" type="button">Slay</button><button class="ghost" id="ownMute" type="button">Mute 10 min</button><button class="ghost" id="ownBring" type="button">Bring to me</button></div></div>
         <div class="group"><span class="lbl">ANNOUNCEMENT</span><div class="row"><input type="text" id="ownMsg" maxlength="120" aria-label="Announcement"><button class="ghost" id="ownSay" type="button">Show to everyone</button></div></div>
         <div class="row"><button class="ghost" id="ownEnd" type="button">End the round</button><button class="ghost" id="ownReset" type="button">Reset scores</button></div>
       </div>
@@ -414,6 +419,11 @@ tr.me td{color:var(--sodium);font-weight:700}
       <h2>Paused</h2>
       <div class="row"><button class="go-btn" id="resume" type="button">Resume</button><button class="ghost" id="quit" type="button">Quit to menu</button></div>
       <p class="rule">Press <kbd>M</kbd> to mute or unmute sound.</p>
+      <div class="group"><span class="lbl">CLIPS</span>
+        <div class="row"><button class="ghost" id="recBtn" type="button">Record (F8)</button><button class="ghost" id="replaySaveBtn" type="button">Save last 30 s (F9)</button></div>
+        <div class="row"><button class="ghost" id="replayBtn" type="button" aria-pressed="false">Replay buffer: off</button><button class="ghost" id="recHudBtn" type="button">HUD in clips: on</button><button class="ghost" id="recQBtn" type="button">Quality: 720p</button></div>
+        <p class="rule">Clips save to your downloads with game sound. The replay buffer keeps the last 30 seconds ready to save; it uses some extra CPU.</p>
+      </div>
       <section class="cheats" aria-labelledby="cheatTitle">
         <div class="cheathead"><span class="lbl" id="cheatTitle">CHEATS</span><span class="cheatnote" id="cheatNote">Bot matches only. Open this panel any time with <kbd>`</kbd></span></div>
         <div class="cheatgrid" id="cheatGrid"></div>
@@ -1582,6 +1592,8 @@ function jumpOrDash() {
 }
 addEventListener('keydown', e => {
   if (CHAT.open) return;
+  if (e.code === 'F8') { e.preventDefault(); if (state !== 'menu') { recToggle(); recUi(); } return; }
+  if (e.code === 'F9') { e.preventDefault(); replaySave(); return; }
   if (state === 'play' && (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyY') && !e.repeat) { e.preventDefault(); openChat(e.code === 'KeyY'); return; }
   if (e.code === 'Tab') { e.preventDefault(); if (state === 'play') { $('board').hidden = false; renderBoard($('boardT')); } return; }
   if (e.code === 'Escape') { if (state === 'pause') resume(); else if (state === 'play' && !document.pointerLockElement) pause(); return; }
@@ -1692,6 +1704,13 @@ $('tCrouch').addEventListener('pointerdown', e => { e.preventDefault(); if (keys
 $('tReload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
 $('buildBtn').addEventListener('click', () => toggleBuild());
 $('chatBtn').addEventListener('click', () => openChat(false));
+$('recBtn').addEventListener('click', () => { recToggle(); recUi(); });
+$('recTouch').addEventListener('click', () => { recToggle(); recUi(); $('recTouch').textContent = REC.on ? 'Stop' : 'Rec'; });
+$('replaySaveBtn').addEventListener('click', replaySave);
+$('replayBtn').addEventListener('click', () => { REC.replay = !REC.replay; store.set('hr-replay', REC.replay ? '1' : '0'); if (!REC.replay) replayStop(); recUi(); });
+$('recHudBtn').addEventListener('click', () => { REC.hud = !REC.hud; store.set('hr-rec-hud', REC.hud ? '1' : '0'); recUi(); });
+$('recQBtn').addEventListener('click', () => { if (REC.on) return; REC.height = REC.height === 720 ? 1080 : 720; store.set('hr-rec-h', String(REC.height)); recUi(); });
+queueMicrotask(recUi);
 $('chatTo').addEventListener('pointerdown', e => { e.preventDefault(); CHAT.team = !CHAT.team; $('chatTo').textContent = CHAT.team ? 'TEAM' : 'ALL'; $('chatTo').classList.toggle('team', CHAT.team); });
 $('chatIn').addEventListener('keydown', e => {
   e.stopPropagation();
@@ -1749,19 +1768,19 @@ function sfx(t, vol = 1) {
       noiseBuf = AC.createBuffer(1, AC.sampleRate*.8, AC.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2-1;
     }
-    const now = AC.currentTime, g = AC.createGain(); g.connect(AC.destination);
+    const now = AC.currentTime, g = AC.createGain(); g.connect(sfxOut());
     const noise = (type, f0, f1, len, v, q = 1) => {
       const n = AC.createBufferSource(); n.buffer = noiseBuf;
       const f = AC.createBiquadFilter(); f.type = type; f.Q.value = q;
       f.frequency.setValueAtTime(f0, now); f.frequency.exponentialRampToValueAtTime(f1, now+len);
       const gg = AC.createGain(); gg.gain.setValueAtTime(v*vol, now); gg.gain.exponentialRampToValueAtTime(.001, now+len);
-      n.connect(f); f.connect(gg); gg.connect(AC.destination); n.start(now); n.stop(now+len);
+      n.connect(f); f.connect(gg); gg.connect(sfxOut()); n.start(now); n.stop(now+len);
     };
     const tone = (type, f0, f1, len, v) => {
       const o = AC.createOscillator(); o.type = type;
       o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now+len);
       const gg = AC.createGain(); gg.gain.setValueAtTime(v*vol, now); gg.gain.exponentialRampToValueAtTime(.001, now+len);
-      o.connect(gg); gg.connect(AC.destination); o.start(now); o.stop(now+len);
+      o.connect(gg); gg.connect(sfxOut()); o.start(now); o.stop(now+len);
     };
     if (t === 'slash') noise('bandpass', 900, 3600, .13, .22, 1.6);
     else if (t === 'stab') noise('bandpass', 500, 1800, .2, .25, 1.6);
@@ -2726,7 +2745,7 @@ function ownerRefresh() {
   const sel = $('ownPlayer'); sel.innerHTML = '';
   for (const e of others) { const o = document.createElement('option'); o.value = e.peer; o.textContent = e.name; sel.append(o); }
   for (const id of ['ownKick','ownSay','ownEnd','ownReset']) $(id).disabled = !NET.on;
-  $('ownKick').disabled = !NET.on || !others.length;
+  for (const id of ['ownKick','ownSlay','ownMute','ownBring']) $(id).disabled = !NET.on || !others.length;
 }
 async function ownerSend(k, extra = {}) {
   if (!OWN.priv || !NET.on) return;
@@ -2741,11 +2760,22 @@ function applyOwnerCommand(c, mine) {
     clearTimeout(applyOwnerCommand.t); applyOwnerCommand.t = setTimeout(() => el.hidden = true, 7000);
   } else if (c.k === 'end') { NET.roundEnd = performance.now() + 5000; callout('ROUND OVER', 'ENDED BY THE OWNER'); $('board').hidden = false; renderBoard($('boardT')); }
   else if (c.k === 'reset') newRound(NET.round + 1);
+  else if (c.k === 'mute') { (OWN.muted || (OWN.muted = new Map())).set(c.t, Date.now() + 10*60000); if (c.t === NET.myPeer && !mine) callout('MUTED', 'BY THE OWNER FOR 10 MINUTES'); }
+  else if (c.k === 'slay' && !mine && c.t === NET.myPeer && player.alive) {
+    if (player.inCar) exitCar(player, true);
+    Object.assign(player, { alive:false, hp:0, respawn:2.6, streak:0, swing:null, deadT:0, zoom:0 }); player.deaths++;
+    $('deathMsg').textContent = 'Slain by the owner'; player.killer = null; NET.died = { q:++NET.seq, by:null, w:'knife' };
+    callout('SLAIN', 'BY THE OWNER');
+  } else if (c.k === 'bring' && !mine && c.t === NET.myPeer && player.alive && Number.isFinite(+c.x) && Number.isFinite(+c.y)) {
+    if (player.inCar) exitCar(player, true);
+    player.x = clamp(+c.x + 40, 20, W - 20); player.y = clamp(+c.y, 20, H - 20); player.jumpY = 0; player.vx = player.vy = 0;
+    callout('TELEPORTED', 'BY THE OWNER');
+  }
   else if (c.k === 'kick' && !mine && c.t === NET.myPeer) {
     OWN.kicked = { code:NET.code, until:Date.now() + 10*60000 };
     leaveOnline(); toMenu(); $('netStatus').textContent = 'The owner removed you from that room. You can join a different room code.';
   }
-  if (mine) $('ownMsgOut').textContent = { say:'Announcement sent.', end:'Round ended.', reset:'Scores reset.', kick:'Player removed.' }[c.k] || '';
+  if (mine) $('ownMsgOut').textContent = { say:'Announcement sent.', end:'Round ended.', reset:'Scores reset.', kick:'Player removed.', slay:'Player slain.', mute:'Player muted for 10 minutes.', bring:'Player brought to you.' }[c.k] || '';
 }
 // called for every other player's presence: check their owner badge and any owner command they carry
 function readOwner(p, pr, e) {
@@ -2788,6 +2818,9 @@ $('ownUnlock').addEventListener('click', async () => {
 $('ownKick').addEventListener('click', () => { const t = $('ownPlayer').value; if (t) { ownerSend('kick', { t }); setTimeout(ownerRefresh, 500); } });
 $('ownSay').addEventListener('click', () => { const m = cleanText($('ownMsg').value, 120); if (m) { ownerSend('say', { m }); $('ownMsg').value = ''; } });
 $('ownEnd').addEventListener('click', () => ownerSend('end'));
+$('ownSlay').addEventListener('click', () => { const t = $('ownPlayer').value; if (t) ownerSend('slay', { t }); });
+$('ownMute').addEventListener('click', () => { const t = $('ownPlayer').value; if (t) ownerSend('mute', { t }); });
+$('ownBring').addEventListener('click', () => { const t = $('ownPlayer').value; if (t) ownerSend('bring', { t, x:Math.round(player.x), y:Math.round(player.y) }); });
 $('ownReset').addEventListener('click', () => ownerSend('reset'));
 
 /* ---------- update ---------- */
@@ -3236,7 +3269,7 @@ function engineSound(on) {
   if (!AC) return;
   if (!engAudio) {
     const o = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain(); o.type = 'sawtooth'; f.type = 'lowpass'; g.gain.value = 0;
-    o.connect(f); f.connect(g); g.connect(AC.destination); o.start(); engAudio = { o, f, g };
+    o.connect(f); f.connect(g); g.connect(sfxOut()); o.start(); engAudio = { o, f, g };
   }
   const r = clamp(Math.abs(car.v)/CAR.maxF, 0, 1.5), gear = (r*4) % 1, now = AC.currentTime;
   engAudio.o.frequency.setTargetAtTime(34 + r*55 + gear*38, now, .05);
@@ -3599,6 +3632,7 @@ function voiceIn(id, b64, radio) {
   if (VC.mode === 'off' || typeof b64 !== 'string' || b64.length > 4000) return;
   const e = remoteFor(id); if (!e) return;
   if (radio && e.team !== player.team) return;
+  if (OWN.muted && (OWN.muted.get(id) || 0) > Date.now()) return;
   const p = voicePeer(id), ac = VC.ac; if (ac.state !== 'running') ac.resume();
   if (radio) {
     const r = radioChain(p), now = ac.currentTime;
@@ -3677,6 +3711,7 @@ function closeChat() { CHAT.open = false; $('chatBar').hidden = true; $('chatIn'
 function sendChat() {
   const text = cleanText($('chatIn').value, 120);
   closeChat();
+  if (OWN.muted && (OWN.muted.get(NET.myPeer) || 0) > Date.now()) { chatLine('Owner', '#f0a23b', "You're muted for a few minutes.", false); return; }
   if (!text || performance.now() - CHAT.last < 300) return;
   CHAT.last = performance.now();
   chatLine(NET.on ? NET.nick || 'You' : 'You', TEAMS[player.team] ? TEAMS[player.team].color : '#ece6da', text, CHAT.team);
@@ -3687,8 +3722,122 @@ function readChatNet(p, pr, e, seen) {
   for (const m of pr.chat.slice(-5)) {
     const q = +(m && m.q) || 0; if (q <= seen.ch) continue; seen.ch = q;
     if (m.tm && e.team !== player.team) continue;
+    if (OWN.muted && (OWN.muted.get(p.peer) || 0) > Date.now()) continue;
     const text = cleanText(m.t, 120); if (text) { chatLine(e.name, e.color, text, !!m.tm); sfx('click', .35); }
   }
+}
+
+/* ---------- recording kit ----------
+   F8 starts/stops recording, F9 saves the last 30 seconds (when the replay buffer is on).
+   The video is the 3D view with the HUD painted on top (kill feed, callouts, health, ammo, crosshair) and the
+   game's sounds; it downloads as MP4 where the browser can record MP4 (Chrome), otherwise WebM. */
+const REC = { on:false, mr:null, chunks:[], t0:0, replay:store.get('hr-replay', '0') === '1', rmr:null, rhead:null, rtail:[],
+  canvas:null, ctx:null, dest:null, height:+store.get('hr-rec-h', '720') || 720, hud:store.get('hr-rec-hud', '1') !== '0', fps:30, active:false };
+function recMime() {
+  if (!window.MediaRecorder) return '';
+  for (const m of ['video/mp4;codecs=avc1.42E01F,mp4a.40.2', 'video/mp4;codecs=avc1,opus', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'])
+    if (MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+// every game sound goes through one bus so the recorder can listen to it
+function sfxOut() {
+  if (!AC.__out) { AC.__out = AC.createGain(); AC.__out.connect(AC.destination); }
+  return AC.__out;
+}
+function recStream() {
+  if (!REC.canvas) { REC.canvas = document.createElement('canvas'); REC.ctx = REC.canvas.getContext('2d'); }
+  const h = REC.height, w = Math.round(h*(cv.width/cv.height || 16/9)/2)*2;
+  REC.canvas.width = w; REC.canvas.height = h;
+  const s = REC.canvas.captureStream(REC.fps);
+  if (!AC) sfx('click', .0001);
+  if (AC) { if (!REC.dest) { REC.dest = AC.createMediaStreamDestination(); sfxOut().connect(REC.dest); } for (const t of REC.dest.stream.getAudioTracks()) s.addTrack(t); }
+  return s;
+}
+function recName(ext) { const d = new Date(), p = n => String(n).padStart(2, '0'); return `drift-and-bolt-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`; }
+function recSave(chunks, mime) {
+  const blob = new Blob(chunks, { type:mime.split(';')[0] }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = recName(mime.includes('mp4') ? 'mp4' : 'webm'); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  recToast(`Saved ${a.download} (${(blob.size/1048576).toFixed(1)} MB) to your downloads`);
+}
+function recToast(msg) { const el = $('recMsg'); el.textContent = msg; el.hidden = false; clearTimeout(recToast.t); recToast.t = setTimeout(() => el.hidden = true, 3500); }
+function recToggle() {
+  const mime = recMime();
+  if (!mime) { recToast("This browser can't record video"); return; }
+  if (REC.on) { REC.on = false; REC.mr.stop(); return; }
+  const mr = new MediaRecorder(recStream(), { mimeType:mime, videoBitsPerSecond:REC.height >= 1080 ? 9e6 : 5e6 });
+  REC.chunks = []; mr.ondataavailable = e => { if (e.data.size) REC.chunks.push(e.data); };
+  mr.onstop = () => recSave(REC.chunks, mime);
+  mr.start(1000); REC.mr = mr; REC.on = true; REC.t0 = performance.now();
+  recToast('Recording (F8 to stop)');
+}
+// instant replay: keep the first chunk (the file header) plus the newest 30 seconds
+function replayStart() {
+  // WebM here: it hands over data every second (Chrome's MP4 recorder doesn't), which the rolling buffer needs
+  const mime = ['video/webm;codecs=vp8,opus', 'video/webm'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)); if (!mime || REC.rmr) return;
+  const mr = new MediaRecorder(recStream(), { mimeType:mime, videoBitsPerSecond:4e6 });
+  REC.rhead = null; REC.rtail = [];
+  mr.ondataavailable = e => { if (!e.data.size) return; if (!REC.rhead) REC.rhead = e.data; else { REC.rtail.push(e.data); if (REC.rtail.length > 30) REC.rtail.shift(); } };
+  mr.start(1000); REC.rmr = mr; REC.rmime = mime;
+}
+function replayStop() { if (REC.rmr) { try { REC.rmr.stop(); } catch (e) {} REC.rmr = null; } }
+function replaySave() {
+  if (!REC.rmr || !REC.rhead) { recToast(REC.replay ? 'Replay is still warming up' : 'Turn on the replay buffer in the pause menu first'); return; }
+  REC.rmr.requestData();
+  setTimeout(() => recSave([REC.rhead, ...REC.rtail], REC.rmime), 150);
+}
+// paint the frame we just rendered, plus the HUD, onto the recording canvas
+function recFrame() {
+  REC.active = REC.on || !!REC.rmr;
+  if (!REC.active) return;
+  const c = REC.ctx, W = REC.canvas.width, H = REC.canvas.height, k = H/720;
+  c.drawImage(cv, 0, 0, W, H);
+  if (!REC.hud || state === 'menu') return recMark(c, W, H, k);
+  const font = (px, fam = 'body', wt = 700) => { c.font = `${wt} ${Math.round(px*k)}px ${fam === 'display' ? '"Saira Stencil One", Impact, sans-serif' : '"Chakra Petch", sans-serif'}`; };
+  const txt = (s, x, y, color = '#ece6da', align = 'left') => { c.textAlign = align; c.lineWidth = 4*k; c.strokeStyle = 'rgba(0,0,0,.65)'; c.strokeText(s, x, y); c.fillStyle = color; c.fillText(s, x, y); };
+  if (!$('scope').hidden) { const g = c.createRadialGradient(W/2, H/2, H*.44, W/2, H/2, H*.46); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  if (!$('cross').hidden) { c.strokeStyle = '#ece6da'; c.lineWidth = 2*k; c.beginPath(); for (const [a, b, d, e] of [[-14, 0, -5, 0], [5, 0, 14, 0], [0, -14, 0, -5], [0, 5, 0, 14]]) { c.moveTo(W/2 + a*k, H/2 + b*k); c.lineTo(W/2 + d*k, H/2 + e*k); } c.stroke(); }
+  if (!$('hud').hidden) {
+    font(34, 'display'); txt($('clock').textContent, W/2, 44*k, '#ece6da', 'center');
+    font(13, 'body', 600); txt($('hudSub').textContent, W/2, 66*k, '#c9ccd0', 'center');
+    font(48, 'display'); txt('+ ' + $('hpN').textContent, 22*k, H - 30*k);
+    font(12); txt($('wName').textContent, W - 22*k, H - 74*k, '#98a2ab', 'right');
+    font(38, 'display'); txt($('ammo').textContent.replace(/\s+/g, ' '), W - 22*k, H - 32*k, '#ece6da', 'right');
+    const car = $('carHud').textContent.trim(); if (car) { font(12); txt(car.replace(/\s+/g, ' '), W/2, H - 22*k, '#98a2ab', 'center'); }
+  }
+  // kill feed
+  let y = 34*k; font(14);
+  for (const el of $('feed').children) {
+    const n = el.querySelectorAll('.n'); if (n.length < 2) continue;
+    const a = n[0].textContent, b = n[1].textContent, op = +getComputedStyle(el).opacity; if (op < .05) continue;
+    c.globalAlpha = op; const wb = c.measureText(b).width;
+    txt(b, W - 20*k, y, n[1].style.color || '#ece6da', 'right'); txt('✕', W - 30*k - wb, y, '#f0a23b', 'right'); txt(a, W - 48*k - wb, y, n[0].style.color || '#ece6da', 'right');
+    c.globalAlpha = 1; y += 26*k;
+  }
+  // callout (KILL, HEADSHOT, ROADKILL...)
+  const co = $('callout'), op = +getComputedStyle(co).opacity;
+  if (op > .02 && co.firstChild) {
+    c.globalAlpha = op; font(64, 'display'); txt(co.firstChild.textContent, W/2, H*.3, '#ece6da', 'center');
+    const sm = co.querySelector('small'); if (sm) { font(13); txt(sm.textContent, W/2, H*.3 + 26*k, '#f0a23b', 'center'); }
+    c.globalAlpha = 1;
+  }
+  // chat
+  let cy = H - 120*k; font(13, 'body', 600);
+  for (const el of [...$('chatLog').children].reverse()) { const o = +el.style.opacity || 1; c.globalAlpha = o; txt(el.textContent, 22*k, cy, '#ece6da'); c.globalAlpha = 1; cy -= 20*k; }
+  recMark(c, W, H, k);
+  if (REC.on) { const s = Math.floor((performance.now() - REC.t0)/1000); $('recInd').textContent = `● REC ${s/60 | 0}:${String(s % 60).padStart(2, '0')}`; }
+}
+function recMark(c, W, H, k) {
+  c.globalAlpha = .55; c.font = `700 ${Math.round(11*k)}px "Chakra Petch", sans-serif`; c.textAlign = 'right'; c.fillStyle = '#ece6da';
+  c.fillText('DRIFT AND BOLT · scratchie018.github.io/bay4', W - 14*k, H - 8*k); c.globalAlpha = 1;
+}
+function recUi() {
+  $('recInd').hidden = !REC.on; if (!REC.on) $('recInd').textContent = '● REC';
+  $('replayInd').hidden = !(REC.replay && REC.rmr);
+  $('recBtn').textContent = REC.on ? 'Stop recording (F8)' : 'Record (F8)';
+  $('replayBtn').textContent = `Replay buffer: ${REC.replay ? 'on' : 'off'}`; $('replayBtn').setAttribute('aria-pressed', REC.replay);
+  $('recHudBtn').textContent = `HUD in clips: ${REC.hud ? 'on' : 'off'}`;
+  $('recQBtn').textContent = `Quality: ${REC.height}p`;
 }
 
 function update(dt) {
@@ -3882,6 +4031,11 @@ function frame(now) {
   else if (NET.on) netFrame(dt);   // keep telling the room about us (and owner commands) while paused
   engineSound(state === 'play');
   render(now/1000, dt);
+  // clips: replay buffer runs during matches; a recording stops when you leave to the menu
+  if (REC.replay && state === 'play' && !REC.rmr) { replayStart(); recUi(); }
+  if (REC.rmr && (!REC.replay || state === 'menu')) { replayStop(); recUi(); }
+  if (REC.on && state === 'menu') { recToggle(); recUi(); }
+  recFrame();
   requestAnimationFrame(frame);
 }
 (document.fonts && document.fonts.load ? Promise.all([document.fonts.load('40px "Saira Stencil One"'), document.fonts.load('600 11px "Chakra Petch"')]).catch(() => {}) : Promise.resolve())
