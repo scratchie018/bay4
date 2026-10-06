@@ -1,4 +1,4 @@
-// Hook & Ring relay: passes game updates between the players in a room over WebSockets.
+// Drift And Bolt relay: passes game updates between the players in a room over WebSockets.
 // One Durable Object per room. Uses the hibernation API so idle rooms cost nothing.
 // Messages (JSON):
 //   client -> relay  {t:'p', p:{...presence}}            my latest state
@@ -14,7 +14,7 @@ const MAX_PLAYERS = 20, MAX_MSG = 16384, MAX_RATE = 90;   // messages per second
 export default {
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
-    if (url.pathname === '/') return new Response('Hook & Ring relay is running.', { headers:{ 'content-type':'text/plain' } });
+    if (url.pathname === '/') return new Response('Drift And Bolt relay is running.', { headers:{ 'content-type':'text/plain' } });
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{1,80})$/);
     if (!m) return new Response('Not found', { status:404 });
     if (!ALLOWED.some(a => origin === a || origin.startsWith(a + ':'))) return new Response('Not allowed', { status:403 });

@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Hook &amp; Ring: a first-person karambit and AWP free-for-all in a warehouse bay. Play bots or friends online."><style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif;background:#0b0c0e}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Hook &amp; Ring</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Drift And Bolt: a first-person karambit and AWP free-for-all in a warehouse bay. Play bots or friends online."><style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif;background:#0b0c0e}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Drift And Bolt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Chakra+Petch:wght@400;500;600;700&display=swap">
@@ -305,7 +305,7 @@ tr.me td{color:var(--sodium);font-weight:700}
   <div class="overlay" id="menu">
     <div class="plate"><div class="in">
       <div class="eyebrow">BAY 4 · TEAMS · FFA DUOS</div>
-      <h1>Hook &amp; Ring</h1>
+      <h1>Drift And Bolt</h1>
       <div class="group"><span class="lbl">MODE</span>
         <div class="modes">
           <button class="mode" type="button" id="m-knife" data-m="knife"><b>Karambit</b><span>Knives only. Hits from behind do double damage, and a stab from behind kills outright.</span></button>
@@ -374,7 +374,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 01:30 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 6 Oct 2026 · 12:00 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -660,7 +660,7 @@ const BUILTIN_MAPS = [{"id":"quarry","name":"Quarry","about":"Open stone quarry.
 
 /* ---------- teams ---------- */
 let TEAM = 0;   // 0 = free-for-all, otherwise players per team
-const TEAMS = [{ name:'Hooks', color:'#e0a040' }, { name:'Rings', color:'#5a9fd6' }, { name:'Blades', color:'#d65a5a' },
+const TEAMS = [{ name:'Drifters', color:'#e0a040' }, { name:'Bolts', color:'#5a9fd6' }, { name:'Blades', color:'#d65a5a' },
   { name:'Sparks', color:'#6fbf5a' }, { name:'Ghosts', color:'#a67de0' }, { name:'Rust', color:'#d0864a' }];
 // every match is teams of two: 2v2 (two teams) or FFA Duos (up to six duos, each for itself)
 let DUOS = store.get('hr-match', '2v2') === 'duos';

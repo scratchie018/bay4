@@ -37,7 +37,7 @@ VT = r"""<script>
 <style>#aimPrompt,#lockHint,#cheatTag,#touch,#menu,#pause,#end,#netStatus{display:none!important}
 #tt{position:fixed;inset:0;pointer-events:none;z-index:50;font-family:"Saira Stencil One",Impact,sans-serif;color:#ece6da}
 #tt .shade{position:absolute;inset:0;background:#000}
-#tt .logo{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font-size:150px;letter-spacing:.02em;white-space:nowrap;text-shadow:0 6px 0 rgba(0,0,0,.55),0 0 40px rgba(0,0,0,.6)}
+#tt .logo{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font-size:124px;letter-spacing:.02em;white-space:nowrap;text-shadow:0 6px 0 rgba(0,0,0,.55),0 0 40px rgba(0,0,0,.6)}
 #tt .tag{position:absolute;left:50%;top:62%;transform:translateX(-50%);font:700 26px "Chakra Petch",sans-serif;letter-spacing:.42em;color:#f0a23b;white-space:nowrap;text-shadow:0 2px 6px #000}
 #tt .word{position:absolute;left:64px;bottom:150px;font-size:96px;letter-spacing:.04em;text-shadow:0 5px 0 rgba(0,0,0,.6)}
 #tt .word i{display:block;height:10px;width:100%;background:#f0a23b;margin-top:4px}

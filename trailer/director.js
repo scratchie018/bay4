@@ -129,8 +129,8 @@
   // title cards: [from, to, kind, text]
   const TITLES = [
     [.6, 2.7, 'small', 'SCRATCHIE018 PRESENTS'],
-    [5.6, 8.0, 'logo', 'Hook & Ring'], [6.5, 8.0, 'tag', 'KARAMBITS  ·  AWPS  ·  CARS'],
-    [42.4, 48, 'logo', 'Hook & Ring'], [43.4, 48, 'tag', 'PLAY FREE IN YOUR BROWSER'], [44.2, 48, 'url', 'scratchie018.github.io/bay4'],
+    [5.6, 8.0, 'logo', 'Drift And Bolt'], [6.5, 8.0, 'tag', 'KARAMBITS  ·  AWPS  ·  CARS'],
+    [42.4, 48, 'logo', 'Drift And Bolt'], [43.4, 48, 'tag', 'PLAY FREE IN YOUR BROWSER'], [44.2, 48, 'url', 'scratchie018.github.io/bay4'],
   ];
   function overlay(t) {
     const host = $('tt'), parts = [];
