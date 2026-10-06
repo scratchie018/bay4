@@ -29,7 +29,7 @@ function fcStart() {
   selfBody(true);
   window.__cam = fcCam; admRender();
 }
-function fcStop() { FC.on = false; FC.play = null; window.__cam = null; FC.keys.clear(); selfBody(false); admRender(); }
+function fcStop() { FC.on = false; FC.play = null; window.__cam = null; FC.keys.clear(); if (!DR.on) selfBody(false); admRender(); }
 // in first person you have no body; give yourself one while the free camera is out (rebuilt when the weapon changes)
 function selfBody(on) {
   const p = player; if (!p) return;
@@ -110,6 +110,7 @@ const botLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.Li
 function admFrame(dt) {
   ADM.fps = ADM.fps*.95 + (1/Math.max(dt, 1e-3))*.05;
   if (FC.on) selfBody(true);
+  droneUpdate(dt);
   const anyViz = Object.values(ADM.viz).some(Boolean);
   if (anyViz && ADM.vizKey !== vizSig()) vizBuild();
   if (!anyViz && ADM.vizGroup) { scene.remove(ADM.vizGroup); ADM.vizGroup = null; ADM.vizKey = ''; for (const m of carHitMeshes) m.visible = false; }
@@ -162,6 +163,10 @@ function admRender() {
     <h4>CAMERA ${L ? '' : '<span class="lock">locked online</span>'}</h4>
     <div class="g">${btn('fc', FC.on ? 'Stop free camera' : 'Free camera', FC.on)}${btn('freeze-world', FC.frozen ? 'Unpause world' : 'Pause world (photo mode)', FC.frozen)}${btn('hud', 'Hide HUD', ADM.hideHud)}${btn('shot', 'Screenshot (F10)')}</div>
     <p class="k">Free camera: WASD move, E/Q up/down, Shift fast, Alt slow, mouse look, wheel zoom, F pause world, K keyframe, P play path.</p>
+    <h4>DRONE CAMERA ${DR.on ? `<span class="k">· ${DR.rec ? 'recording' : 'on'}</span>` : ''}</h4>
+    <div class="g">${btn('drone-place', DR.on ? 'Move drone here' : 'Place drone here')}${btn('drone-rec', REC.on && REC.src ? 'Stop drone recording' : 'Record from drone', REC.on && !!REC.src)}${DR.on ? btn('drone-off', 'Remove drone') : ''}</div>
+    <p class="k">Recording (F8) in free camera keeps filming from the drone after you go back to first person.</p>
+    <div class="g">${DR_OPTS.map(([k, label]) => btn('dopt-' + k, label, DR.opt[k])).join('')}</div>
     <h4>CAMERA PATH · ${FC.path.length} keyframes</h4>
     <div class="g">${btn('key', 'Add keyframe (K)')}${btn('play', 'Play (P)')}${btn('playrec', 'Play & record')}${btn('undo', 'Remove last')}${btn('clear', 'Clear')}${btn('save', 'Save')}${btn('load', 'Load')}</div>
     <label>Duration ${FC.dur}s <input type="range" min="2" max="40" step="1" value="${FC.dur}" data-a="dur"></label>
@@ -201,6 +206,10 @@ document.addEventListener('click', async e => {
     if (a === 'reload' && currentMap.code) { const c = currentMap.code; currentMap = { id:'', code:'' }; setCustomMap(parseMapCode(c), c); setupBuild(); setupCars(); for (const x of ents) if (!x.remote) spawn(x); }
   }
   else if (a === 'fc') { FC.on ? fcStop() : fcStart(); }
+  else if (a === 'drone-place') { if (droneStart(true)) admToast('Drone placed where your camera is'); }
+  else if (a === 'drone-off') droneStop();
+  else if (a === 'drone-rec') { if (REC.on) { recToggle(); recUi(); } else { if (!DR.on && !droneStart(true)) return admRender(); recToggle(); recUi(); } }
+  else if (a && a.startsWith('dopt-')) { const k = a.slice(5); DR.opt[k] = !DR.opt[k]; if (k === 'orbit' && DR.opt.orbit) DR.opt.follow = false; if (k === 'follow' && DR.opt.follow) DR.opt.orbit = false; droneSave(); if (DR.on && player) DR.offset.copy(DR.pos).sub(new THREE.Vector3(player.x*S, player.jumpY || 0, player.y*S)); }
   else if (a === 'freeze-world') { if (!L) return locked(); FC.frozen = !FC.frozen; ADM.timeScale = FC.frozen ? 0 : 1; }
   else if (a === 'hud') ADM.hideHud = !ADM.hideHud;
   else if (a === 'shot') ADM.shot = true;
@@ -237,5 +246,5 @@ document.addEventListener('input', e => {
   const lab = t.closest('label'); if (lab) lab.firstChild.textContent = t.dataset.a === 'time' ? `Time ${(+t.value).toFixed(2)}× ` : `Duration ${t.value}s `;
 });
 // leaving offline play (joining a normal room) turns off what isn't allowed there
-setInterval(() => { if (!admLocal()) { if (FC.on) fcStop(); if (ADM.timeScale !== 1) { ADM.timeScale = 1; FC.frozen = false; } } }, 500);
+setInterval(() => { if (!admLocal()) { if (DR.on) droneStop(); if (FC.on) fcStop(); if (ADM.timeScale !== 1) { ADM.timeScale = 1; FC.frozen = false; } } }, 500);
 admLog('info', 'Admin tools loaded. F2 opens the dock.');

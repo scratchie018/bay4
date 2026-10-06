@@ -17,7 +17,11 @@ rep("""  render(now/1000, dt);
   // clips:""")
 # your own body (shown in free camera) jumps with you
 rep("M.g.position.set(e.x*S, e.remote ? Math.max(-30, e.jumpY || 0) : 0, e.y*S);", "M.g.position.set(e.x*S, e.remote || e.isPlayer ? Math.max(-30, e.jumpY || 0) : 0, e.y*S);")
-rep("function update(dt) {", open(os.path.join(here, 'admin.js')).read() + "\nfunction update(dt) {")
+# your own body only shows to the free camera / drone, never in your own first-person view
+rep("    M.g.visible = !(e.prot > 0 && Math.sin(t*30) > 0);", "    M.g.visible = !(e.prot > 0 && Math.sin(t*30) > 0) && !(e.isPlayer && !FC.on);")
+# recordings can come from the drone's canvas
+rep("  c.drawImage(cv, 0, 0, W, H);", "  c.drawImage(REC.src || cv, 0, 0, W, H); if (window.__recPost) window.__recPost(c, W, H); if (REC.src) return recMark(c, W, H, k);")
+rep("function update(dt) {", open(os.path.join(here, 'admin.js')).read() + "\n" + open(os.path.join(here, 'drone.js')).read() + "\nfunction update(dt) {")
 CSS = """<style>
 #adm{position:fixed;right:0;top:0;bottom:0;width:min(380px,100vw);background:rgba(14,16,19,.94);border-left:1px solid #343a44;z-index:60;color:#e9ecf1;font:13px/1.35 system-ui,sans-serif;display:flex;flex-direction:column}
 #adm .head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #2a2e36}
