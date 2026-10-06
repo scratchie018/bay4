@@ -338,6 +338,8 @@ tr.me td{color:var(--sodium);font-weight:700}
           </div>
         </div>
         <div class="group"><label class="lbl" for="sens">MOUSE SENSITIVITY <span id="sensV">1.0</span></label><input type="range" id="sens" min="0.2" max="3" step="0.1" value="1"></div>
+        <div class="group"><span class="lbl">GRAPHICS</span><div class="seg" id="gfxPick"><button type="button" data-g="off">Off</button><button type="button" data-g="lite">Lite</button><button type="button" data-g="ultra">Ultra</button></div></div>
+        <div class="group"><span class="lbl">TIME OF DAY</span><div class="seg" id="todPick"><button type="button" data-t="cycle">Cycle</button><button type="button" data-t="day">Day</button><button type="button" data-t="sunset">Sunset</button><button type="button" data-t="night">Night</button></div></div>
       </div>
       <div class="group"><span class="lbl">KARAMBIT FINISH</span><div class="swatches" id="finishes"></div></div>
       <div class="keys" id="keys">
@@ -379,7 +381,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 17:00 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 6 Oct 2026 · 18:30 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -2159,6 +2161,12 @@ function syncTeamUi() {
 function syncCarUi() { for (const b of $('carPick').children) b.setAttribute('aria-pressed', (b.dataset.c === '1') === carsOn); }
 for (const b of $('carPick').children) b.addEventListener('click', () => { carsOn = b.dataset.c === '1'; store.set('hr-cars', carsOn ? '1' : '0'); syncCarUi(); });
 queueMicrotask(syncCarUi);
+function syncGfxUi() { for (const b of $('gfxPick').children) b.setAttribute('aria-pressed', b.dataset.g === GFX.mode); }
+for (const b of $('gfxPick').children) b.addEventListener('click', () => { GFX.mode = b.dataset.g; store.set('hr-gfx', GFX.mode); syncGfxUi(); });
+queueMicrotask(syncGfxUi);
+function syncTodUi() { for (const b of $('todPick').children) b.setAttribute('aria-pressed', b.dataset.t === SKY.mode); }
+for (const b of $('todPick').children) b.addEventListener('click', () => { SKY.mode = b.dataset.t; store.set('hr-tod', SKY.mode); syncTodUi(); });
+queueMicrotask(syncTodUi);
 for (const b of $('teamPick').children) b.addEventListener('click', () => {
   DUOS = b.dataset.m === 'duos'; TEAM = DUOS ? 2 : +b.dataset.m;
   store.set('hr-match', DUOS ? 'duos' : 'teams'); if (!DUOS) store.set('hr-team-size', String(TEAM)); syncTeamUi(); if (typeof updateNetStatus === 'function') updateNetStatus(); });
@@ -3840,6 +3848,183 @@ function recUi() {
   $('recQBtn').textContent = `Quality: ${REC.height}p`;
 }
 
+/* ---------- shaders: post-processing and shadows ----------
+   Off: plain rendering. Lite: the frame (world + first-person arms) is drawn into an HDR buffer, then one pass adds
+   bloom, filmic tone mapping, colour grading, FXAA anti-aliasing, a vignette and a little grain.
+   Ultra: Lite plus stronger bloom, slight lens fringing, and real-time shadows from the sun/moon light. */
+const GFX = { mode:store.get('hr-gfx', 'off'), rt:null, b0:null, b1:null, b2:null, quad:null, mats:null, w:0, h:0, shadowT:0 };
+function gfxTargets() {
+  const sz = new THREE.Vector2(); renderer.getDrawingBufferSize(sz);
+  if (GFX.rt && GFX.w === sz.x && GFX.h === sz.y) return;
+  for (const k of ['rt', 'b0', 'b1', 'b2']) if (GFX[k]) GFX[k].dispose();
+  const type = renderer.capabilities.isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  GFX.w = sz.x; GFX.h = sz.y;
+  GFX.rt = new THREE.WebGLRenderTarget(sz.x, sz.y, { type, depthBuffer:true });
+  const bw = Math.max(1, sz.x >> 2), bh = Math.max(1, sz.y >> 2);
+  GFX.b0 = new THREE.WebGLRenderTarget(bw, bh, { type }); GFX.b1 = new THREE.WebGLRenderTarget(bw, bh, { type }); GFX.b2 = new THREE.WebGLRenderTarget(bw, bh, { type });
+}
+const GFX_VERT = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+function gfxInit() {
+  if (GFX.quad) return;
+  const sh = (frag, uniforms) => new THREE.ShaderMaterial({ vertexShader:GFX_VERT, fragmentShader:frag, uniforms, depthTest:false, depthWrite:false });
+  GFX.mats = {
+    // keep only what's brighter than the threshold (that's what glows)
+    bright: sh(`uniform sampler2D tex; uniform float threshold; varying vec2 vUv;
+      void main() { vec3 c = texture2D(tex, vUv).rgb; float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c*smoothstep(threshold, threshold + .35, l), 1.0); }`,
+      { tex:{ value:null }, threshold:{ value:.72 } }),
+    // 9-tap gaussian blur in one direction
+    blur: sh(`uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
+      void main() { vec3 c = texture2D(tex, vUv).rgb*.227;
+        c += (texture2D(tex, vUv + dir*1.385).rgb + texture2D(tex, vUv - dir*1.385).rgb)*.316;
+        c += (texture2D(tex, vUv + dir*3.231).rgb + texture2D(tex, vUv - dir*3.231).rgb)*.070;
+        gl_FragColor = vec4(c, 1.0); }`,
+      { tex:{ value:null }, dir:{ value:new THREE.Vector2() } }),
+    // the final look
+    final: sh(`uniform sampler2D tex; uniform sampler2D bloom; uniform vec2 px; uniform float bloomK, grain, fringe, time, sat, contrast, exposure; uniform vec3 tint; varying vec2 vUv;
+      vec3 aces(vec3 x) { return clamp((x*(2.51*x + .03))/(x*(2.43*x + .59) + .14), 0.0, 1.0); }
+      float luma(vec3 c) { return dot(c, vec3(.299, .587, .114)); }
+      vec3 fxaa(vec2 uv) {
+        vec3 m = texture2D(tex, uv).rgb, n = texture2D(tex, uv + vec2(0.0, -px.y)).rgb, s = texture2D(tex, uv + vec2(0.0, px.y)).rgb,
+             e = texture2D(tex, uv + vec2(px.x, 0.0)).rgb, w = texture2D(tex, uv + vec2(-px.x, 0.0)).rgb;
+        float lm = luma(m), ln = luma(n), ls = luma(s), le = luma(e), lw = luma(w);
+        float range = max(lm, max(max(ln, ls), max(le, lw))) - min(lm, min(min(ln, ls), min(le, lw)));
+        if (range < max(.03, lm*.12)) return m;
+        vec2 d = normalize(vec2(abs(ln - ls) - .0001, abs(le - lw)) + 1e-5);
+        vec3 a = texture2D(tex, uv + d*px*.75).rgb + texture2D(tex, uv - d*px*.75).rgb;
+        return mix(m, a*.5, .55);
+      }
+      void main() {
+        vec2 uv = vUv, c = uv - .5;
+        vec3 col = fxaa(uv);
+        if (fringe > 0.0) { col.r = mix(col.r, texture2D(tex, uv + c*fringe).r, .9); col.b = mix(col.b, texture2D(tex, uv - c*fringe).b, .9); }
+        col += texture2D(bloom, uv).rgb*bloomK;
+        // tone-map brightness only, so colours (like a blue sky) keep their saturation
+        col *= exposure; float L0 = max(luma(col), 1e-4); col *= aces(vec3(L0)).r/L0; col = min(col, vec3(1.0));
+        float l = luma(col); col = mix(vec3(l), col, sat); col = (col - .5)*contrast + .5; col *= tint;
+        col *= 1.0 - smoothstep(.45, .95, length(c*vec2(1.15, 1.0)))*.42;
+        col += (fract(sin(dot(uv*1000.0 + time, vec2(12.9898, 78.233)))*43758.5453) - .5)*grain;
+        gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+      }`,
+      { tex:{ value:null }, bloom:{ value:null }, px:{ value:new THREE.Vector2() }, bloomK:{ value:.7 }, grain:{ value:.025 }, fringe:{ value:0 }, time:{ value:0 },
+        sat:{ value:1.08 }, contrast:{ value:1.06 }, exposure:{ value:.92 }, tint:{ value:new THREE.Vector3(1.02, 1.0, .97) } }),
+  };
+  GFX.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), GFX.mats.final); GFX.quad.frustumCulled = false;
+  GFX.scene = new THREE.Scene(); GFX.scene.add(GFX.quad); GFX.cam = new THREE.Camera();
+}
+function gfxPass(mat, target) { GFX.quad.material = mat; renderer.setRenderTarget(target); renderer.render(GFX.scene, GFX.cam); }
+// called around every frame
+function gfxBegin() {
+  if (GFX.mode === 'off') return;
+  gfxInit(); gfxTargets();
+  renderer.setRenderTarget(GFX.rt);
+}
+function gfxEnd(t) {
+  if (GFX.mode === 'off') return;
+  const M = GFX.mats, ultra = GFX.mode === 'ultra';
+  M.bright.uniforms.tex.value = GFX.rt.texture; M.bright.uniforms.threshold.value = ultra ? .86 : .93; gfxPass(M.bright, GFX.b0);
+  const bw = GFX.b0.width, bh = GFX.b0.height;
+  for (let i = 0; i < (ultra ? 3 : 2); i++) {
+    M.blur.uniforms.tex.value = GFX.b0.texture; M.blur.uniforms.dir.value.set((1 + i)/bw, 0); gfxPass(M.blur, GFX.b1);
+    M.blur.uniforms.tex.value = GFX.b1.texture; M.blur.uniforms.dir.value.set(0, (1 + i)/bh); gfxPass(M.blur, GFX.b0);
+  }
+  const F = M.final.uniforms;
+  F.tex.value = GFX.rt.texture; F.bloom.value = GFX.b0.texture; F.px.value.set(1/GFX.w, 1/GFX.h); F.time.value = t % 100;
+  F.bloomK.value = ultra ? .9 : .6; F.grain.value = ultra ? .035 : .02; F.fringe.value = ultra ? .0035 : 0;
+  gfxPass(M.final, null);
+}
+// Ultra: the scene's directional light casts shadows around the player; everything solid casts and receives
+function gfxShadows(dt) {
+  const on = GFX.mode === 'ultra';
+  if (renderer.shadowMap.enabled !== on) {
+    renderer.shadowMap.enabled = on; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  }
+  moon.castShadow = on;
+  if (GFX.moonBase === undefined) { GFX.moonBase = moon.intensity; scene.add(moon.target); }
+  if (!on) { if (!SKY.outdoor) moon.intensity = GFX.moonBase; moon.target.position.set(0, 0, 0); moon.target.updateMatrixWorld(); return; }
+  if ((GFX.shadowT -= dt) <= 0) {
+    GFX.shadowT = 1;
+    const s = moon.shadow; s.mapSize.set(2048, 2048); s.bias = -.0006; s.normalBias = .02;
+    Object.assign(s.camera, { left:-30, right:30, top:30, bottom:-30, near:1, far:120 }); s.camera.updateProjectionMatrix();
+    scene.traverse(o => { if (o.isMesh && !o.userData.noShadow && o.visible && o.material && !o.material.transparent && o.geometry && o.geometry.type !== 'PlaneGeometry') { o.castShadow = true; o.receiveShadow = true; } if (o.isMesh && o.geometry && o.geometry.type === 'PlaneGeometry') o.receiveShadow = true; });
+  }
+  // keep the shadow area centred on whoever is watching
+  const c = camera.position, dir = SKY.lightDir;
+  moon.position.set(c.x + dir.x*50, c.y + dir.y*50, c.z + dir.z*50); moon.target.position.set(c.x, 0, c.z); moon.target.updateMatrixWorld();
+  if (!SKY.outdoor) moon.intensity = Math.max(GFX.moonBase, .45);
+}
+/* ---------- sky and day/night ----------
+   Outdoor maps get a procedural sky dome (gradient, sun, moon, stars, drifting clouds). A full day takes 20 real
+   minutes, driven by the real clock so every player sees the same time without any network traffic.
+   The scene's directional light becomes the sun (or the moon at night); ambient light and fog follow the sky. */
+const SKY = { mode:store.get('hr-tod', 'cycle'), mesh:null, mat:null, mapKey:'', outdoor:false, base:null, tod:12, sunDir:new THREE.Vector3(0, 1, 0), lightDir:new THREE.Vector3(-10, 20, -6).normalize() };
+const DAY_SECONDS = 20*60;
+function skyMaterial() {
+  return new THREE.ShaderMaterial({
+    side:THREE.BackSide, depthWrite:false, fog:false,
+    uniforms:{ sunDir:{ value:new THREE.Vector3() }, top:{ value:new THREE.Color() }, horizon:{ value:new THREE.Color() }, sunCol:{ value:new THREE.Color() }, night:{ value:0 }, time:{ value:0 }, cloud:{ value:new THREE.Color() } },
+    vertexShader:'varying vec3 vDir; void main() { vDir = normalize(position); vec4 p = projectionMatrix*modelViewMatrix*vec4(position, 1.0); gl_Position = p.xyww; }',
+    fragmentShader:`uniform vec3 sunDir, top, horizon, sunCol, cloud; uniform float night, time; varying vec3 vDir;
+      float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
+      float n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f*f*(3.0 - 2.0*f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
+      float fbm(vec2 p) { float v = 0.0, a = .5; for (int i = 0; i < 4; i++) { v += a*n(p); p *= 2.03; a *= .5; } return v; }
+      void main() {
+        vec3 d = normalize(vDir); float y = max(d.y, 0.0);
+        vec3 col = mix(horizon, top, pow(y, .55));
+        col = mix(col, horizon*.55, smoothstep(0.0, -.25, d.y));                       // below the horizon
+        float s = max(dot(d, sunDir), 0.0);
+        col += sunCol*(pow(s, 900.0)*6.0 + pow(s, 12.0)*.35);                           // sun disc and glow
+        float m = max(dot(d, -sunDir), 0.0);
+        col += vec3(.85, .9, 1.0)*smoothstep(.9994, .9997, m)*night*1.4;               // moon
+        vec2 sp = d.xz/(d.y + .05);
+        float st = step(.9965, h(floor(sp*90.0)))*smoothstep(.05, .3, d.y);
+        col += vec3(st)*night*(.6 + .4*sin(time*3.0 + h(floor(sp*90.0))*40.0));        // twinkling stars
+        if (d.y > 0.0) {
+          vec2 cp = d.xz/(d.y + .12)*1.4 + vec2(time*.012, time*.004);
+          float c = smoothstep(.5, .78, fbm(cp));
+          col = mix(col, cloud, c*.75*smoothstep(0.0, .18, d.y));
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+}
+const lerpC = (a, b, k) => new THREE.Color(a).lerp(new THREE.Color(b), k);
+function skyUpdate(t) {
+  // which map are we on? indoor maps (Bay 4, or anything with a solid roof) keep their own lighting
+  const key = currentMap.id + '|' + (currentMap.code || '').length;
+  if (!SKY.orig) SKY.orig = { hemiCol:hemi.color.clone(), hemiGround:hemi.groundColor.clone(), moon:moon.intensity, moonCol:moon.color.clone() };
+  if (key !== SKY.mapKey) {
+    SKY.mapKey = key;
+    // back to the map's own light before deciding (a previous outdoor map changed it)
+    hemi.color.copy(SKY.orig.hemiCol); hemi.groundColor.copy(SKY.orig.hemiGround); moon.intensity = SKY.orig.moon; moon.color.copy(SKY.orig.moonCol);
+    SKY.outdoor = !!(currentMap.data && (!currentMap.data.env || currentMap.data.env.roof !== 'solid'));
+    SKY.base = { hemi:hemi.intensity, moon:moon.intensity, moonCol:moon.color.clone(), bg:scene.background, fog:scene.fog ? { near:scene.fog.near, far:scene.fog.far, col:scene.fog.color.clone() } : null };
+  }
+  if (!SKY.mesh) { SKY.mat = skyMaterial(); SKY.mesh = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), SKY.mat); SKY.mesh.frustumCulled = false; SKY.mesh.renderOrder = -1; SKY.mesh.userData.noShadow = true; scene.add(SKY.mesh); }
+  SKY.mesh.visible = SKY.outdoor;
+  if (!SKY.outdoor) { SKY.lightDir.set(-10, 20, -6).normalize(); return; }
+  SKY.tod = SKY.mode === 'day' ? 13 : SKY.mode === 'sunset' ? 18.15 : SKY.mode === 'night' ? 0.5 : (Date.now()/1000/DAY_SECONDS*24 + 9) % 24;
+  const a = (SKY.tod - 6)/24*Math.PI*2, sunH = Math.sin(a);
+  SKY.sunDir.set(Math.cos(a)*.85, sunH, .45).normalize();
+  const day = THREE.MathUtils.smoothstep(sunH, -.12, .3), dusk = Math.max(0, 1 - Math.abs(sunH)/.28)*(1 - Math.max(0, -sunH)*3), night = 1 - THREE.MathUtils.smoothstep(sunH, -.25, -.02);
+  const top = lerpC('#060a18', '#3f7fd2', day), hor = lerpC('#111a30', '#b9d3ea', day).lerp(new THREE.Color('#ff8a4a'), Math.max(0, dusk)*.65);
+  const U = SKY.mat.uniforms;
+  U.sunDir.value.copy(SKY.sunDir); U.top.value.copy(top); U.horizon.value.copy(hor); U.night.value = night; U.time.value = t;
+  U.sunCol.value.copy(lerpC('#ff7a3c', '#fff1d0', THREE.MathUtils.clamp(sunH*3, 0, 1))).multiplyScalar(sunH > -.05 ? 1 : 0);
+  U.cloud.value.copy(lerpC('#1a2238', '#f4f7fb', day).lerp(new THREE.Color('#ffb48a'), Math.max(0, dusk)*.6));
+  SKY.mesh.position.copy(camera.position);
+  // the light: the sun by day, a dim blue moon at night (always from above so shadows stay sensible)
+  const sunUp = sunH > -.05;
+  SKY.lightDir.copy(sunUp ? SKY.sunDir : SKY.sunDir.clone().negate()); SKY.lightDir.y = Math.max(.25, SKY.lightDir.y); SKY.lightDir.normalize();
+  moon.color.copy(sunUp ? lerpC('#ffb070', '#fff4e2', THREE.MathUtils.clamp(sunH*3, 0, 1)) : new THREE.Color('#9db4e0'));
+  moon.intensity = sunUp ? .25 + .85*THREE.MathUtils.clamp(sunH*2, 0, 1) : .22;
+  hemi.intensity = SKY.base.hemi*(.48 + .52*day);
+  hemi.color.copy(lerpC('#5a6c96', '#c9d8ea', day)); hemi.groundColor.copy(lerpC('#141820', '#4a4034', day));
+  if (scene.fog) scene.fog.color.copy(hor);
+  scene.background = hor;
+  const c = camera.position; moon.position.set(c.x + SKY.lightDir.x*60, c.y + SKY.lightDir.y*60, c.z + SKY.lightDir.z*60);
+}
+
 function update(dt) {
   if (!NET.on) { if (!cheat('notimer')) matchT -= dt; if (matchT <= 0) { endMatch("Time's up"); return; } }
   else netFrame(dt);
@@ -3977,7 +4162,8 @@ function resize() {
   camera.aspect = vmCam.aspect = w/h; camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
-function render(t, dt) {
+function render(t, dt) { skyUpdate(t); gfxShadows(dt); gfxBegin(); renderInner(t, dt); gfxEnd(t); }
+function renderInner(t, dt) {
   if (state === 'menu' || !player) {
     const a = t*.06;
     camera.fov = 60; camera.updateProjectionMatrix();
