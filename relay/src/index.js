@@ -17,7 +17,9 @@ export default {
     if (url.pathname === '/') return new Response('Drift And Bolt relay is running.', { headers:{ 'content-type':'text/plain' } });
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{1,80})$/);
     if (!m) return new Response('Not found', { status:404 });
-    if (!ALLOWED.some(a => origin === a || origin.startsWith(a + ':'))) return new Response('Not allowed', { status:403 });
+    // our own sites, local testing, and CrazyGames (web: *.crazygames.com, Android: https://app.crazygames.com, iOS: capacitor://app.crazygames.com)
+    const crazy = /^https:\/\/([a-z0-9-]+\.)*crazygames\.com$/.test(origin) || origin === 'capacitor://app.crazygames.com';
+    if (!crazy && !ALLOWED.some(a => origin === a || origin.startsWith(a + ':'))) return new Response('Not allowed', { status:403 });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status:426 });
     return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
   },
