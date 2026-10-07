@@ -285,7 +285,7 @@ tr.me td{color:var(--sodium);font-weight:700}
   <div class="hud" id="death" hidden><div class="k" id="deathMsg">Killed by Vex</div><div class="t" id="respT">2.4</div></div>
   <div class="hud" id="cheatTag" hidden>CHEATS ON</div>
   <div class="hud" id="aimPrompt" hidden>CLICK TO AIM</div>
-  <div class="hud" id="lockHint" hidden>Mouse lock is blocked here. Move the mouse inside the window to look.</div>
+  <div class="hud" id="lockHint" hidden>Click to lock the mouse (looking follows the cursor until then).</div>
 
   <div id="touch" hidden>
     <div id="lookZone"></div>
@@ -382,7 +382,7 @@ tr.me td{color:var(--sodium);font-weight:700}
         <div class="netstatus" id="netStatus" role="status">Connecting…</div>
       </div>
       <p class="ver">Car: <a href="https://sketchfab.com/3d-models/low-poly-mercedes-amg-gt-r-2ff421e59bf345a281779ec43fe98d34" target="_blank" rel="noopener">“Low Poly Mercedes-AMG GT-R”</a> by kulonee, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
-      <p class="ver" id="ver">Version 6 Oct 2026 · 20:47 · if this looks old, press Ctrl+Shift+R</p>
+      <p class="ver" id="ver">Version 7 Oct 2026 · 13:45 · if this looks old, press Ctrl+Shift+R</p>
     </div></div>
   </div>
 
@@ -1636,7 +1636,7 @@ document.addEventListener('mousemove', e => {
 });
 cv.addEventListener('mousedown', e => {
   if (state !== 'play') return;
-  if (lockOK && !touchMode && !isLocked()) { requestLock(); return; }
+  if (!touchMode && !isLocked()) { if (lockOK) { requestLock(); return; } requestLock(true); }   // a refused lock gets retried on every click
   if (BLD.on) { if (e.button === 0) placeBuild(); if (e.button === 2) toggleBuild(false); return; }
   if (e.button === 0) { mouse.L = true; if (player.weapon === 'awp') playerFire(); }
   if (e.button === 2) altFire();
@@ -1649,8 +1649,8 @@ addEventListener('wheel', e => { if (BLD.on && state === 'play') BLD.turn += e.d
 // Only a page that has never been able to lock (some embedded views) falls back to plain mouse movement.
 let lockEver = false;
 const isLocked = () => document.pointerLockElement === cv;
-function requestLock() {
-  if (touchMode || !lockOK || isLocked()) return;
+function requestLock(retry) {
+  if (touchMode || (!lockOK && !retry) || isLocked()) return;
   try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => lockRefused()); } catch (e) { lockRefused(); }
 }
 function lockRefused() {
@@ -1664,7 +1664,7 @@ function updateAimPrompt() {
 }
 document.addEventListener('pointerlockerror', lockRefused);
 document.addEventListener('pointerlockchange', () => {
-  if (isLocked()) lockEver = true;
+  if (isLocked()) { lockEver = true; lockOK = true; $('lockHint').hidden = true; }
   updateAimPrompt();
   if (!isLocked() && state === 'play' && lockOK) pause();
 });
