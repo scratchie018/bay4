@@ -51,14 +51,13 @@ $('nick').addEventListener('change', () => { if (!CG.user) { NET.nick = cleanTex
 const cgParams = () => ({ room:NET.code, md:mode, ty:String(TEAM), du:DUOS ? '1' : '0', vh:carsOn ? '1' : '0', mp:mapChoice.startsWith('b:') || mapChoice === 'bay4' ? mapChoice : 'bay4', cx:NET.cheatsRoom ? '1' : '0' });
 function cgRoomUpdate() {
   if (!CG.on) return;
-  if (!NET.on) { if (CG.roomKey) { CG.roomKey = ''; CG.joinable = null; try { CG.S.game.leftRoom(); CG.S.game.hideInviteButton(); } catch (e) {} } return; }
+  if (!NET.on) { if (CG.roomKey) { CG.roomKey = ''; CG.joinable = null; try { CG.S.game.leftRoom(); } catch (e) {} } return; }
   const players = ents.filter(e => e.remote).length + 1, joinable = players < 16, key = NET.code + '|' + joinable;
   if (key === CG.roomKey) return;
   CG.roomKey = key;
   const p = cgParams();
   try {
     CG.S.game.updateRoom({ roomId:`${mode}-${DUOS ? 'duo' : 't' + TEAM}-${NET.code}`, isJoinable:joinable, inviteParams:p });
-    if (joinable) CG.S.game.showInviteButton(p); else CG.S.game.hideInviteButton();
   } catch (e) {}
 }
 // take on the inviter's settings, then go straight into their room (no menu)
