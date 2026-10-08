@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 const [out = '/var/home/mohammed/Downloads/hr-shot/trailer-frames', preview] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive:true });
-const FPS = 30, LEN = 48, N = FPS*LEN, keep = preview ? new Set([20, 120, 210, 260, 330, 470, 570, 600, 650, 760, 780, 840, 900, 1050, 1200, 1320, 1420]) : null;
+const FPS = 30, LEN = 52, N = FPS*LEN, keep = preview ? new Set([20, 120, 210, 260, 330, 470, 570, 600, 650, 760, 780, 840, 900, 1050, 1200, 1270, 1300, 1340, 1380, 1420, 1500]) : null;
 const chrome = spawn('flatpak', ['run', 'com.google.Chrome', '--headless=new', '--remote-debugging-port=9334', '--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio',
   '--user-data-dir=/var/home/mohammed/Downloads/hr-shot/prof-trailer', 'about:blank'], { stdio:'ignore' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));

@@ -10,6 +10,7 @@
   function start(map, opts = {}) {
     const g = G();
     for (const k of Object.keys(g.CHEAT)) g.CHEAT[k] = false;
+    g.GFX.mode = 'ultra'; window.__tod = opts.tod ?? 13;   // Ultra shaders, and each shot picks its time of day
     g.setMap(map); g.setTeams(opts.team || 2, false); g.setCars(opts.cars !== false);
     document.getElementById(opts.awp ? 'm-awp' : 'm-knife').click();
     g.startMatch(); g.setState('play');
@@ -22,10 +23,10 @@
   const turn = (p, a, k) => { let d = a - p.ang; while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI; p.ang += d*k; };
 
   const SHOTS = [
-    { t0:0, t1:3, setup() { window.__cam = c => look(c, 80, 40, 34, 80, 0, 34); hud(false); start('b:highway'); } },
+    { t0:0, t1:3, setup() { window.__cam = c => look(c, 80, 40, 34, 80, 0, 34); hud(false); start('b:highway', { tod:18.4 }); } },
     // aerial over the highway, cars on both carriageways
     { t0:3, t1:8, setup() {
-        const g = start('b:highway'); hud(false); g.player.x = 6200; g.player.y = 2600;
+        const g = start('b:highway', { tod:17.9 }); hud(false); g.player.x = 6200; g.player.y = 2600;
         const lanes = [[1100, 680, 0, 950], [500, 868, 0, 1100], [3600, 1400, Math.PI, 900], [4200, 1580, Math.PI, 1000]];
         g.CARS.forEach((c, i) => { const L = lanes[i % lanes.length]; Object.assign(c, { x:L[0], y:L[1], ang:L[2], v:L[3] }); c.cruise = L[3]; });
         for (const e of g.ents) if (!e.isPlayer) park(e, 6300, 2650);
@@ -34,7 +35,7 @@
       }, each() { for (const c of G().CARS) c.v = c.cruise; } },
     // first-person karambit in the market square
     { t0:8, t1:14, word:'KARAMBIT', setup() {
-        const g = start('b:market', { cheats:{ onehit:true, freeze:true } }); window.__cam = null; hud(true);
+        const g = start('b:market', { tod:11, cheats:{ onehit:true, freeze:true } }); window.__cam = null; hud(true);
         const p = g.player; park(p, 1000, 1360); p.ang = 0; p.pitch = -.05;
         const [a, b] = g.ents.filter(e => !e.isPlayer && e.team !== p.team);
         for (const e of g.ents) if (!e.isPlayer && e !== a && e !== b) park(e, 2600, 2600);
@@ -48,7 +49,7 @@
       } },
     // AWP down the highway
     { t0:14, t1:18, word:'AWP', setup() {
-        const g = start('b:highway', { awp:true, cheats:{ freeze:true, spread:true } }); window.__cam = null; hud(true);
+        const g = start('b:highway', { awp:true, tod:15.5, cheats:{ freeze:true, spread:true } }); window.__cam = null; hud(true);
         const p = g.player; park(p, 800, 1400); p.ang = 0; p.pitch = 0;
         const foe = g.ents.find(e => !e.isPlayer && e.team !== p.team);
         for (const e of g.ents) if (!e.isPlayer && e !== foe) park(e, 6200, 300);
@@ -62,7 +63,7 @@
       } },
     // driving: boost, ramp jump, roadkill
     { t0:18, t1:24, word:'CARS', setup() {
-        const g = start('b:highway', { cheats:{ freeze:true } }); window.__cam = null; hud(true);
+        const g = start('b:highway', { tod:17.3, cheats:{ freeze:true } }); window.__cam = null; hud(true);
         const p = g.player, car = g.CARS[0];
         Object.assign(car, { x:1300, y:868, ang:0, v:0 });
         g.CARS.slice(1).forEach((c, i) => { c.x = 5200 + i*300; c.y = 1500; });
@@ -81,7 +82,7 @@
       } },
     // a car goes up
     { t0:24, t1:28, word:'WRECK', setup() {
-        const g = start('b:highway', { cheats:{ freeze:true } }); hud(false);
+        const g = start('b:highway', { tod:18.4, cheats:{ freeze:true } }); hud(false);
         const p = g.player; park(p, 300, 300);
         for (const e of g.ents) if (!e.isPlayer) park(e, 6200, 300);
         const car = g.CARS[1]; Object.assign(car, { x:2600, y:780, ang:.35, v:0 }); this.car = car; this.n = 0;
@@ -110,7 +111,7 @@
       } },
     // team fight in the market, camera circling
     { t0:32, t1:38, line:'2v2 TO 8v8  ·  FFA DUOS', setup() {
-        const g = start('b:market', { team:4 }); hud(false);
+        const g = start('b:market', { team:4, tod:12.5 }); hud(false);
         const p = g.player; park(p, 1360, 1460);
         g.ents.filter(e => !e.isPlayer).forEach((e, i) => park(e, e.team === p.team ? 1000 + (i % 3)*40 : 1720 - (i % 4)*40, 1200 + (i*67) % 320));
         window.__cam = c => { const a = .6 + this.lt*.22, R = 13; look(c, 34 + Math.cos(a)*R, 6.5, 34 + Math.sin(a)*R, 34, 1, 34); };
@@ -120,8 +121,14 @@
         const g = start('b:frost', { cheats:{ freeze:true } }); hud(false); park(g.player, 60, 60);
         window.__cam = c => { const k = this.lt/4; look(c, 8 + k*40, 2.2 + k*2.5, 46 - k*14, 30 + k*30, 1.5, 24 - k*4); };
       } },
+    // time-lapse down the highway: afternoon, sunset, stars
+    { t0:42, t1:46, line:'SHADERS  ·  DAY & NIGHT  ·  CONTROLLER SUPPORT', setup() {
+        const g = start('b:highway', { tod:16, cheats:{ freeze:true } }); hud(false); park(g.player, 300, 300);
+        for (const e of g.ents) if (!e.isPlayer) park(e, 6200, 300);
+        window.__cam = c => { const k = this.lt/4; look(c, 118 - k*10, 4.5 + k*1.5, 31, 40 - k*10, 4 + k*3, 24); };
+      }, each() { window.__tod = 16 + this.lt*2.0; } },
     // end card
-    { t0:42, t1:48, setup() {
+    { t0:46, t1:52, setup() {
         const g = start('bay4', { cheats:{ freeze:true } }); hud(false); park(g.player, 60, 60);
         window.__cam = c => { const a = this.lt*.08; look(c, 25 + Math.cos(a)*16, 7, 17.5 + Math.sin(a)*11, 25, 1, 17.5); };
       } },
@@ -130,14 +137,14 @@
   const TITLES = [
     [.6, 2.7, 'small', 'SCRATCHIE018 PRESENTS'],
     [5.6, 8.0, 'logo', 'Drift And Bolt'], [6.5, 8.0, 'tag', 'KARAMBITS  ·  AWPS  ·  CARS'],
-    [42.4, 48, 'logo', 'Drift And Bolt'], [43.4, 48, 'tag', 'PLAY FREE IN YOUR BROWSER'], [44.2, 48, 'url', 'scratchie018.github.io/bay4'],
+    [46.4, 52, 'logo', 'Drift And Bolt'], [47.4, 52, 'tag', 'PLAY FREE IN YOUR BROWSER'], [48.2, 52, 'url', 'scratchie018.github.io/bay4'],
   ];
   function overlay(t) {
     const host = $('tt'), parts = [];
     const fade = (a, b, f = .3) => Math.min(ease((t - a)/f), ease((b - t)/f));
     if (t < 3) parts.push(['shade', '', 1]);
-    if (t >= 42) parts.push(['shade', '', .55*ease((t - 42)/.6)]);
-    if (t > 47.2) parts.push(['shade', '', ease((t - 47.2)/.8)]);
+    if (t >= 46) parts.push(['shade', '', .55*ease((t - 46)/.6)]);
+    if (t > 51.2) parts.push(['shade', '', ease((t - 51.2)/.8)]);
     for (const [a, b, kind, text] of TITLES) if (t >= a && t < b) parts.push([kind, text, fade(a, b, kind === 'logo' ? .5 : .35)]);
     const s = SHOTS.find(s => t >= s.t0 && t < s.t1);
     if (s && s.word && t < s.t0 + 2.2) parts.push(['word', s.word, fade(s.t0 + .15, s.t0 + 2.2, .25)]);
@@ -162,5 +169,5 @@
     window.__vt.step(1000/FPS);
     return 1;
   };
-  window.__length = 48;
+  window.__length = 52;
 })();
