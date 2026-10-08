@@ -45,7 +45,7 @@
         const g = G(), p = g.player, lt = this.lt, { a, b } = this;
         if (lt < 1.4 && a.alive) { turn(p, faceTo(p, a.x, a.y), .3); g.keys.add('KeyW'); if (lt > .45 && this.step === 0) { this.step = 1; g.dash(p, Math.cos(p.ang), Math.sin(p.ang)); } if (Math.hypot(a.x - p.x, a.y - p.y) < 70) g.attack(p, 'slash'); }
         else if (b.alive && lt < 4) { turn(p, faceTo(p, b.x, b.y), .18); if (lt > 1.9) g.keys.add('KeyW'); else g.keys.delete('KeyW'); if (Math.hypot(b.x - p.x, b.y - p.y) < 75) g.attack(p, 'stab'); }
-        else { g.keys.delete('KeyW'); if (lt > 4.3 && this.step < 2) { this.step = 2; p.inspect = 1.6; } }
+        else { g.keys.delete('KeyW'); if (lt > 4.3 && this.step < 2) { this.step = 2; p.inspect = 1.6; g.sfx('draw', .5); } }
       } },
     // AWP down the highway
     { t0:14, t1:18, word:'AWP', setup() {

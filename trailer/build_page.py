@@ -53,7 +53,7 @@ rep("renderer.clearDepth(); renderer.render(vmScene, vmCam);", "if (!window.__ca
 rep("function sfx(t, vol = 1) {", "function sfx(t, vol = 1) {\n  if (window.__cue) window.__cue(t, vol);")
 rep("const touchMode = ", """window.__g = () => ({ player, ents, CARS, CHEAT, keys, mouse, camera, startMatch, attack, dash, playerFire, carDamage, enterCar, carBoost,
   placeBuild, pickBuild, toggleBuild, BLD, addBuild, applyCheatVisuals, S, setMap:v => { mapChoice = v; }, setTeams:(n, d) => { TEAM = n; DUOS = !!d; },
-  setCars:v => { carsOn = v; }, setState:v => { state = v; }, groundAt, GFX });
+  setCars:v => { carsOn = v; }, setState:v => { state = v; }, groundAt, GFX, sfx });
 const touchMode = """)
 # the director sets the time of day per shot
 rep("SKY.tod = SKY.mode === 'day'", "SKY.tod = window.__tod != null ? window.__tod : SKY.mode === 'day'")

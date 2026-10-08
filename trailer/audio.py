@@ -10,7 +10,7 @@ LEN = float(sys.argv[3]) if len(sys.argv) > 3 else 48.0
 N = int(SR*LEN)
 rng = np.random.default_rng(7)
 BPM = 120; BEAT = 60/BPM; BAR = 4*BEAT
-CUTS = [3, 8, 14, 18, 24, 28, 32, 38, 42]
+CUTS = [3, 8, 14, 18, 24, 28, 32, 38, 42, 46]
 
 def t_(sec): return np.arange(int(sec*SR))/SR
 def env(n, a=.005, r=None, curve=4.0):
@@ -109,14 +109,15 @@ def groove(t0, t1, half=False):
             if not half: add(music, t + e*BEAT/2, bass_note(root - 24 + pat, BEAT/2*.92), 1.0)
         if pos == 0: add(music, t, stab([root, root + 3 if bar == 0 else root + 4, root + 7]), 1.0)
         t += BEAT
-groove(8, 38)
-for b in range(int(30/BAR)): add(music, 8 + b*BAR, pad([ROOTS[b % 4], ROOTS[b % 4] + (3 if b % 4 == 0 else 4), ROOTS[b % 4] + 7], BAR, bright=2200), .5)
-add(music, 38, pad([45, 52, 57, 60], 4.2, bright=900), .9)
-groove(38, 42, half=True)
-add(music, 40.0, riser(2.0), 1.1)
-add(music, 42, pad([45, 52, 57, 64], 6.0, bright=1600), 1.0)
+groove(8, 42)
+for b in range(int(34/BAR)): add(music, 8 + b*BAR, pad([ROOTS[b % 4], ROOTS[b % 4] + (3 if b % 4 == 0 else 4), ROOTS[b % 4] + 7], BAR, bright=2200), .5)
+# breakdown under the day/night time-lapse, then the final hit on the end card
+add(music, 42, pad([45, 52, 57, 60], 4.2, bright=900), .9)
+groove(42, 46, half=True)
+add(music, 44.0, riser(2.0), 1.1)
+add(music, 46, pad([45, 52, 57, 64], 6.0, bright=1600), 1.0)
 for c in CUTS[2:]:
-    add(music, c, IMP, .8 if c != 42 else 1.2)
+    add(music, c, IMP, .8 if c != 46 else 1.2)
     add(music, c - 1.0, riser(1.0)*.5, .6)
 add(music, 8, IMP, 1.3)
 
@@ -140,6 +141,13 @@ def s_door(): n = int(.2*SR); return fft_filter(noise(n), lo=300, hi=1500)*env(n
 def s_zoom(): n = int(.03*SR); return fft_filter(noise(n), lo=3500)*env(n, .0005, curve=10)*.4
 SFX = { 'slash':(s_slash, 1), 'stab':(s_stab, 1), 'dash':(s_dash, .9), 'hit':(s_hit, .8), 'kill':(s_kill, .8), 'awp':(s_awp, 1.1), 'click':(s_click, .7),
         'bolt':(s_bolt, .6), 'thud':(s_thud, .9), 'pop':(s_pop, 1), 'boom':(s_boom, 1.3), 'door':(s_door, .7), 'zoom':(s_zoom, .7), 'whiz':(s_dash, .5), 'hurt':(s_hit, .4) }
+# recorded samples (sfx/build_sfx.py) replace the synth versions where they exist, as in the game
+import os, wave as _w
+_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sfx', 'out')
+def _sample(name):
+    with _w.open(os.path.join(_dir, name + '.wav')) as w: return np.frombuffer(w.readframes(w.getnframes()), np.int16)/32767*1.6
+for name in list(SFX) + ['crash', 'draw']:
+    if os.path.exists(os.path.join(_dir, name + '.wav')): SFX[name] = (lambda n=name: _sample(n), SFX.get(name, (None, 1))[1] if name in SFX else .9)
 cache = {}
 eng = []
 for c in cues:

@@ -35,7 +35,7 @@ function gpPoll(dt) {
         if (!b(7) && GP.prev[7]) mouse.L = false;
         if (down(6)) { if (p.weapon === 'awp') altFire(); else mouse.R = true; }
         if (!b(6) && GP.prev[6]) mouse.R = false;
-        if (down(12) && p.weapon === 'knife' && !p.swing && p.inspect <= 0) p.inspect = 1.6;
+        if (down(12) && p.weapon === 'knife' && !p.swing && p.inspect <= 0) { p.inspect = 1.6; sfx('draw', .5); }
       }
       if (down(0) && p.alive && !p.inCar) p.wantJump = true;
       if (down(1) && !p.inCar) { if (keys.has('KeyC')) keys.delete('KeyC'); else keys.add('KeyC'); }
