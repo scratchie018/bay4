@@ -41,6 +41,8 @@ rep("function phoneScreen() {\n  if (!touchMode) return;", "function phoneScreen
 rep("new THREE.PointsMaterial({ color:0x8e1222, size:.06 })", "new THREE.PointsMaterial({ color:0xffb35c, size:.05 })")
 rep("fx.fillStyle = `rgba(${110+rand(0,30)|0},10,20,${a})`;", "fx.fillStyle = `rgba(22,20,18,${a*.55})`;")
 # original names, no outbound links, no cross-promotion
+# the GitHub page's canonical / share-preview tags point at GitHub; CrazyGames hosts its own page
+s = re.sub(r'<link rel="canonical"[^>]*>|<meta (property="og:|name="twitter:)[^>]*>', '', s)
 s = s.replace("'AMG GT-R · BOOST' : 'AMG GT-R'", "'SPORTS CAR · BOOST' : 'SPORTS CAR'")
 s = re.sub(r'<p class="ver">Car: .*?</p>', '<p class="ver">Car model: "Low Poly Mercedes-AMG GT-R" by kulonee (Sketchfab), CC BY 4.0. Textures: Screaming Brain Studios, CC0.</p>', s, count=1, flags=re.S)
 s = re.sub(r"<p class=\"rule\">Play against friends\. Send them this page's link.*?</p>", '<p class="rule">Play with friends: press <b>Invite</b> on CrazyGames, or share a room code. Everyone with the same room code and settings plays together.</p>', s, count=1, flags=re.S)
