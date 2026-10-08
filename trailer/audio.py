@@ -8,6 +8,7 @@ cues = json.load(open(sys.argv[1]))
 OUT = sys.argv[2]
 LEN = float(sys.argv[3]) if len(sys.argv) > 3 else 48.0
 N = int(SR*LEN)
+FADE = float(sys.argv[4]) if len(sys.argv) > 4 else 1.2   # fade-out length at the end
 rng = np.random.default_rng(7)
 BPM = 120; BEAT = 60/BPM; BAR = 4*BEAT
 CUTS = [3, 8, 14, 18, 24, 28, 32, 38, 42, 46]
@@ -115,7 +116,7 @@ for b in range(int(34/BAR)): add(music, 8 + b*BAR, pad([ROOTS[b % 4], ROOTS[b % 
 add(music, 42, pad([45, 52, 57, 60], 4.2, bright=900), .9)
 groove(42, 46, half=True)
 add(music, 44.0, riser(2.0), 1.1)
-add(music, 46, pad([45, 52, 57, 64], 6.0, bright=1600), 1.0)
+add(music, 46, pad([45, 52, 57, 64], LEN - 46 + .3, bright=1600), 1.0)   # rings on under the thumbnail at the very end
 for c in CUTS[2:]:
     add(music, c, IMP, .8 if c != 46 else 1.2)
     add(music, c - 1.0, riser(1.0)*.5, .6)
@@ -174,7 +175,7 @@ mix = music*.8 + sfx*.9
 env_s = np.convolve(np.abs(sfx), np.ones(2048)/2048, mode='same')
 mix = music*.8*(1 - np.clip(env_s*1.5, 0, .45)) + sfx*.9
 fade_in = np.minimum(1, np.arange(N)/(.5*SR)); mix *= fade_in
-fade_out = np.ones(N); fo = int(1.2*SR); fade_out[-fo:] = np.linspace(1, 0, fo); mix *= fade_out
+fade_out = np.ones(N); fo = int(FADE*SR); fade_out[-fo:] = np.linspace(1, 0, fo); mix *= fade_out
 mix = np.tanh(mix*1.1)*.9
 mix /= max(1e-9, np.max(np.abs(mix)))/.95
 st = np.stack([mix, np.roll(mix, int(.012*SR))*.96 + mix*.04], axis=1)   # a touch of width
